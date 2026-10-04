@@ -1,0 +1,456 @@
+{
+  "generated_at": "2026-10-03T08:09:07+00:00",
+  "statut": "succes",
+  "exclusions_anonymisation_appliquees": 32,
+  "configuration": {
+    "seed": 42,
+    "tokenizer": "Qwen/Qwen3-1.7B-Base",
+    "sft": {
+      "max_seq_length": 1024,
+      "marge_template": 96,
+      "total_train": 5000,
+      "blocs": {
+        "mediqal": {
+          "source": "mediqal",
+          "configs": [
+            "mcqu",
+            "mcqm"
+          ],
+          "train": 2500,
+          "validation": 250,
+          "sujets_exclus": [
+            "Histology",
+            "Embryology",
+            "Cytology",
+            "Anatomy"
+          ],
+          "priorite": "clinique"
+        },
+        "frenchmedmcqa": {
+          "source": "frenchmedmcqa",
+          "train": 300,
+          "validation": 30
+        },
+        "medquad": {
+          "source": "medquad",
+          "train": 1400,
+          "validation": 140,
+          "qtypes": [
+            "information",
+            "symptoms",
+            "treatment",
+            "causes",
+            "exams and tests",
+            "complications",
+            "prevention",
+            "outlook",
+            "susceptibility"
+          ]
+        },
+        "triage": {
+          "fichier": "data/interim/triage_synthetique.jsonl",
+          "train": 800,
+          "validation": 80,
+          "complement": "mediqal"
+        }
+      },
+      "split_medquad": {
+        "test_pct": 5,
+        "validation_pct": 5
+      },
+      "eval_clinique": {
+        "source": "mediqal",
+        "config": "oeq",
+        "sujets": [
+          "Emergency Medicine",
+          "Intensive Care"
+        ]
+      }
+    },
+    "dpo": {
+      "max_prompt_length": 512,
+      "max_length": 1536,
+      "marge_template": 96,
+      "label_types": [
+        "hard",
+        "easy"
+      ],
+      "quotas_train": {
+        "ChatDoctor": 1500,
+        "MedQA": 750,
+        "MedQA-Evol": 750
+      },
+      "quotas_validation": {
+        "ChatDoctor": 130,
+        "MedQA": 85,
+        "MedQA-Evol": 85
+      }
+    }
+  },
+  "contenu": {
+    "sft_train": {
+      "total": 5000,
+      "source": {
+        "mediqal": 3300,
+        "medquad": 1400,
+        "frenchmedmcqa": 300
+      },
+      "bloc": {
+        "mediqal": 3300,
+        "medquad": 1400,
+        "frenchmedmcqa": 300
+      },
+      "task": {
+        "mcq_single": 2430,
+        "open_qa": 1400,
+        "mcq_multi": 1170
+      },
+      "langue": {
+        "fr": 3600,
+        "en": 1400
+      },
+      "has_clinical_case": {
+        "True": 2972,
+        "False": 2028
+      },
+      "medical_subject": {
+        "None": 1400,
+        "Pharmacy": 300,
+        "Cardiology": 294,
+        "Hepato-Gastroenterology": 269,
+        "Pulmonology": 248,
+        "Endocrinology and Metabolism": 241,
+        "Gynecology and Obstetrics": 241,
+        "Pediatrics": 206,
+        "Nephro-Urology": 198,
+        "Hematology": 196,
+        "Rheumatology": 182,
+        "Psychiatry": 180,
+        "Neurology": 170,
+        "Infectious Diseases": 170,
+        "Dermatology": 128,
+        "Otorhinolaryngology (ENT)": 120,
+        "Orthopedics": 92,
+        "Ophthalmology": 69,
+        "Epidemiology": 66,
+        "Biochemistry": 50,
+        "Forensic Medicine and Toxicology": 48,
+        "Occupational Medicine": 44,
+        "Genetics": 19,
+        "Immunology": 17,
+        "Pathological Anatomy": 16,
+        "Microbiology": 15,
+        "Pharmacology": 8,
+        "Rehabilitation": 5,
+        "Parasitology": 4,
+        "Physiology": 3,
+        "Radiology": 1
+      }
+    },
+    "sft_validation": {
+      "total": 500,
+      "source": {
+        "mediqal": 330,
+        "medquad": 140,
+        "frenchmedmcqa": 30
+      },
+      "bloc": {
+        "mediqal": 330,
+        "medquad": 140,
+        "frenchmedmcqa": 30
+      },
+      "task": {
+        "mcq_single": 247,
+        "open_qa": 140,
+        "mcq_multi": 113
+      },
+      "langue": {
+        "fr": 360,
+        "en": 140
+      },
+      "has_clinical_case": {
+        "True": 294,
+        "False": 206
+      },
+      "medical_subject": {
+        "None": 140,
+        "Cardiology": 34,
+        "Pharmacy": 30,
+        "Hepato-Gastroenterology": 26,
+        "Endocrinology and Metabolism": 25,
+        "Pulmonology": 23,
+        "Nephro-Urology": 22,
+        "Hematology": 22,
+        "Rheumatology": 21,
+        "Pediatrics": 16,
+        "Gynecology and Obstetrics": 16,
+        "Neurology": 16,
+        "Psychiatry": 15,
+        "Orthopedics": 14,
+        "Dermatology": 13,
+        "Otorhinolaryngology (ENT)": 12,
+        "Infectious Diseases": 10,
+        "Epidemiology": 10,
+        "Biochemistry": 7,
+        "Occupational Medicine": 7,
+        "Ophthalmology": 6,
+        "Forensic Medicine and Toxicology": 4,
+        "Genetics": 3,
+        "Pathological Anatomy": 3,
+        "Immunology": 2,
+        "Rehabilitation": 1,
+        "Microbiology": 1,
+        "Parasitology": 1
+      }
+    },
+    "sft_test": {
+      "total": 8821,
+      "source": {
+        "mediqal": 7727,
+        "medquad": 773,
+        "frenchmedmcqa": 321
+      },
+      "bloc": {
+        "None": 8821
+      },
+      "task": {
+        "mcq_single": 4664,
+        "mcq_multi": 3384,
+        "open_qa": 773
+      },
+      "langue": {
+        "fr": 8048,
+        "en": 773
+      },
+      "has_clinical_case": {
+        "False": 5483,
+        "True": 3338
+      },
+      "medical_subject": {
+        "None": 773,
+        "Cardiology": 564,
+        "Hematology": 533,
+        "Hepato-Gastroenterology": 508,
+        "Gynecology and Obstetrics": 465,
+        "Pulmonology": 459,
+        "Nephro-Urology": 440,
+        "Rheumatology": 392,
+        "Endocrinology and Metabolism": 387,
+        "Pediatrics": 360,
+        "Neurology": 335,
+        "Infectious Diseases": 332,
+        "Pharmacy": 321,
+        "Psychiatry": 307,
+        "Dermatology": 284,
+        "Orthopedics": 275,
+        "Otorhinolaryngology (ENT)": 264,
+        "Ophthalmology": 225,
+        "Forensic Medicine and Toxicology": 204,
+        "Occupational Medicine": 167,
+        "Epidemiology": 162,
+        "Immunology": 158,
+        "Biochemistry": 148,
+        "Genetics": 139,
+        "Pathological Anatomy": 131,
+        "Pharmacology": 119,
+        "Microbiology": 101,
+        "Parasitology": 71,
+        "Histology": 71,
+        "Physiology": 69,
+        "Radiology": 28,
+        "Anatomy": 18,
+        "Cytology": 6,
+        "Embryology": 3,
+        "Rehabilitation": 2
+      }
+    },
+    "eval_clinique": {
+      "total": 263,
+      "source": {
+        "mediqal": 263
+      },
+      "bloc": {
+        "None": 263
+      },
+      "task": {
+        "open_qa": 263
+      },
+      "langue": {
+        "fr": 263
+      },
+      "has_clinical_case": {
+        "True": 263
+      },
+      "medical_subject": {
+        "Intensive Care": 154,
+        "Emergency Medicine": 109
+      }
+    },
+    "dpo_train": {
+      "total": 3000,
+      "origine": {
+        "ChatDoctor": 1500,
+        "MedQA": 750,
+        "MedQA-Evol": 750
+      },
+      "label_type": {
+        "hard": 2016,
+        "easy": 984
+      }
+    },
+    "dpo_validation": {
+      "total": 300,
+      "origine": {
+        "ChatDoctor": 130,
+        "MedQA": 85,
+        "MedQA-Evol": 85
+      },
+      "label_type": {
+        "hard": 211,
+        "easy": 89
+      }
+    },
+    "dpo_test": {
+      "total": 777,
+      "origine": {
+        "ChatDoctor": 93,
+        "MedQuad": 88,
+        "Medical-Instruct-120k": 87,
+        "WikiInstruct": 86,
+        "MedInstruct-52k": 81,
+        "MedQA-Evol": 76,
+        "MedMCQA": 75,
+        "MedQA": 74,
+        "TextBookQA": 73,
+        "PubMedQA": 44
+      },
+      "label_type": {
+        "easy": 238,
+        "hard": 196,
+        "length": 180,
+        "human": 163
+      }
+    }
+  },
+  "quotas": {
+    "sft_train": {
+      "mediqal": {
+        "quota": 2500,
+        "eligibles": 14989,
+        "retenus": 2500
+      },
+      "frenchmedmcqa": {
+        "quota": 300,
+        "eligibles": 589,
+        "retenus": 300
+      },
+      "medquad": {
+        "quota": 1400,
+        "eligibles": 8898,
+        "retenus": 1400
+      },
+      "triage": {
+        "quota": 800,
+        "eligibles": 0,
+        "retenus": 0,
+        "complement": {
+          "depuis": "mediqal",
+          "nombre": 800
+        }
+      }
+    },
+    "sft_validation": {
+      "mediqal": {
+        "quota": 250,
+        "eligibles": 3938,
+        "retenus": 250
+      },
+      "frenchmedmcqa": {
+        "quota": 30,
+        "eligibles": 163,
+        "retenus": 30
+      },
+      "medquad": {
+        "quota": 140,
+        "eligibles": 458,
+        "retenus": 140
+      },
+      "triage": {
+        "quota": 80,
+        "eligibles": 0,
+        "retenus": 0,
+        "complement": {
+          "depuis": "mediqal",
+          "nombre": 80
+        }
+      }
+    },
+    "dpo_train": {
+      "ChatDoctor": {
+        "quota": 1500,
+        "candidats": 5973,
+        "retenus": 1500
+      },
+      "MedQA": {
+        "quota": 750,
+        "candidats": 5594,
+        "retenus": 750
+      },
+      "MedQA-Evol": {
+        "quota": 750,
+        "candidats": 5199,
+        "retenus": 750
+      }
+    },
+    "dpo_validation": {
+      "ChatDoctor": {
+        "quota": 130,
+        "candidats": 150,
+        "retenus": 130
+      },
+      "MedQA": {
+        "quota": 85,
+        "candidats": 141,
+        "retenus": 85
+      },
+      "MedQA-Evol": {
+        "quota": 85,
+        "candidats": 120,
+        "retenus": 85
+      }
+    }
+  },
+  "exclusions": {
+    "sft_validation": {
+      "present_dans_jeu_prioritaire": 25,
+      "doublon_interne": 108,
+      "sujet_exclu": 41,
+      "trop_long": 13,
+      "qtype_exclu": 208
+    },
+    "sft_train": {
+      "present_dans_jeu_prioritaire": 316,
+      "doublon_interne": 2353,
+      "sujet_exclu": 155,
+      "trop_long": 379,
+      "qtype_exclu": 3667
+    },
+    "dpo_train": {
+      "label_type_exclu": 41119,
+      "origine_exclue": 48227,
+      "scores_incoherents": 536,
+      "exclusion_anonymisation": 48,
+      "doublon_interne": 2522,
+      "present_dans_jeu_prioritaire": 135,
+      "trop_long": 10
+    },
+    "dpo_validation": {
+      "label_type_exclu": 859,
+      "origine_exclue": 950,
+      "exclusion_anonymisation": 1,
+      "scores_incoherents": 10,
+      "doublon_interne": 1,
+      "trop_long": 2
+    }
+  }
+}

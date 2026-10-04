@@ -1,0 +1,204 @@
+{
+  "generated_at": "2026-10-03T20:24:28+00:00",
+  "system_prompt": "Tu es l'assistant médical du service des urgences du Centre Hospitalier Saint-Aurélien (CHSA). Tu aides le personnel soignant et les patients en répondant avec exactitude aux questions médicales, dans la langue de la question.",
+  "chat_template": "Qwen/Qwen3-1.7B-Base",
+  "enable_thinking": false,
+  "limites_entrainement": {
+    "sft_max_seq_length": 1024,
+    "dpo_max_prompt_length": 608,
+    "dpo_max_length": 1536
+  },
+  "jeux": {
+    "sft_train": {
+      "total": 5000,
+      "langue": {
+        "fr": 3600,
+        "en": 1400
+      },
+      "task": {
+        "mcq_single": 2430,
+        "open_qa": 1400,
+        "mcq_multi": 1170
+      },
+      "tokens_avec_template": {
+        "p50": 365,
+        "p95": 645,
+        "max": 991
+      },
+      "depassements": 0,
+      "ids_depassements": []
+    },
+    "sft_validation": {
+      "total": 500,
+      "langue": {
+        "fr": 360,
+        "en": 140
+      },
+      "task": {
+        "mcq_single": 247,
+        "open_qa": 140,
+        "mcq_multi": 113
+      },
+      "tokens_avec_template": {
+        "p50": 348,
+        "p95": 635,
+        "max": 966
+      },
+      "depassements": 0,
+      "ids_depassements": []
+    },
+    "sft_test": {
+      "total": 8821,
+      "langue": {
+        "fr": 8048,
+        "en": 773
+      },
+      "task": {
+        "mcq_single": 4664,
+        "mcq_multi": 3384,
+        "open_qa": 773
+      },
+      "tokens_avec_template": {
+        "p50": 260,
+        "p95": 582,
+        "max": 2347
+      },
+      "depassements": 28,
+      "ids_depassements": [
+        "mediqal:mcqu:test:26861",
+        "mediqal:mcqm:test:1939",
+        "mediqal:mcqm:test:1940",
+        "medquad:default:unsplit:206",
+        "medquad:default:unsplit:233",
+        "medquad:default:unsplit:1544",
+        "medquad:default:unsplit:1595",
+        "medquad:default:unsplit:1596",
+        "medquad:default:unsplit:1947",
+        "medquad:default:unsplit:1948",
+        "medquad:default:unsplit:1993",
+        "medquad:default:unsplit:2044",
+        "medquad:default:unsplit:2086",
+        "medquad:default:unsplit:2560",
+        "medquad:default:unsplit:2772",
+        "medquad:default:unsplit:3298",
+        "medquad:default:unsplit:3496",
+        "medquad:default:unsplit:3775",
+        "medquad:default:unsplit:4036",
+        "medquad:default:unsplit:4237"
+      ]
+    },
+    "eval_clinique": {
+      "total": 263,
+      "langue": {
+        "fr": 263
+      },
+      "task": {
+        "open_qa": 263
+      },
+      "tokens_avec_template": {
+        "p50": 579,
+        "p95": 1018,
+        "max": 1546
+      },
+      "depassements": 13,
+      "ids_depassements": [
+        "mediqal:oeq:test:2758",
+        "mediqal:oeq:test:2808",
+        "mediqal:oeq:test:2809",
+        "mediqal:oeq:test:2810",
+        "mediqal:oeq:test:2811",
+        "mediqal:oeq:test:2834",
+        "mediqal:oeq:test:3842",
+        "mediqal:oeq:test:3843",
+        "mediqal:oeq:test:3844",
+        "mediqal:oeq:test:3845",
+        "mediqal:oeq:test:3846",
+        "mediqal:oeq:test:3847",
+        "mediqal:oeq:test:3848"
+      ]
+    },
+    "dpo_train": {
+      "total": 3000,
+      "langue": {
+        "en": 3000
+      },
+      "origine": {
+        "ChatDoctor": 1500,
+        "MedQA": 750,
+        "MedQA-Evol": 750
+      },
+      "tokens_avec_template": {
+        "p50": 646,
+        "p95": 909,
+        "max": 1284
+      },
+      "tokens_prompt_avec_template": {
+        "p50": 199,
+        "p95": 361,
+        "max": 579
+      },
+      "depassements": 0,
+      "ids_depassements": []
+    },
+    "dpo_validation": {
+      "total": 300,
+      "langue": {
+        "en": 300
+      },
+      "origine": {
+        "ChatDoctor": 130,
+        "MedQA": 85,
+        "MedQA-Evol": 85
+      },
+      "tokens_avec_template": {
+        "p50": 631,
+        "p95": 917,
+        "max": 1108
+      },
+      "tokens_prompt_avec_template": {
+        "p50": 199,
+        "p95": 351,
+        "max": 448
+      },
+      "depassements": 0,
+      "ids_depassements": []
+    },
+    "dpo_test": {
+      "total": 777,
+      "langue": {
+        "en": 777
+      },
+      "origine": {
+        "ChatDoctor": 93,
+        "MedQuad": 88,
+        "Medical-Instruct-120k": 87,
+        "WikiInstruct": 86,
+        "MedInstruct-52k": 81,
+        "MedQA-Evol": 76,
+        "MedMCQA": 75,
+        "MedQA": 74,
+        "TextBookQA": 73,
+        "PubMedQA": 44
+      },
+      "tokens_avec_template": {
+        "p50": 616,
+        "p95": 979,
+        "max": 1801
+      },
+      "tokens_prompt_avec_template": {
+        "p50": 159,
+        "p95": 420,
+        "max": 746
+      },
+      "depassements": 5,
+      "ids_depassements": [
+        "ultramedical_preference:default:test:MedInstruct-52k,21123",
+        "ultramedical_preference:default:test:PubMedQA,22795519",
+        "ultramedical_preference:default:test:PubMedQA,24593993",
+        "ultramedical_preference:default:test:PubMedQA,24606076",
+        "ultramedical_preference:default:test:PubMedQA,26848396"
+      ]
+    }
+  },
+  "statut": "succes"
+}

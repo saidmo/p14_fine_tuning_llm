@@ -1,0 +1,37 @@
+# Généré par src.data.audit_names — ne pas éditer à la main.
+# Exemples retirés par précaution (terme d'exclusion : configs/prive/, non versionné).
+# Cumulatif : un identifiant n'est jamais retiré de cette liste (sinon une sélection
+# ultérieure réintégrerait l'exemple). Lu par src.data.select : écartés de tous les jeux.
+exemples_exclus:
+  - {id: "ultramedical_preference:default:train:ChatDoctor,11179", raison: "précaution"}
+  - {id: "ultramedical_preference:default:train:ChatDoctor,11357", raison: "précaution"}
+  - {id: "ultramedical_preference:default:train:ChatDoctor,11561", raison: "précaution"}
+  - {id: "ultramedical_preference:default:train:ChatDoctor,12472", raison: "précaution"}
+  - {id: "ultramedical_preference:default:train:ChatDoctor,13790", raison: "précaution"}
+  - {id: "ultramedical_preference:default:train:ChatDoctor,14142", raison: "précaution"}
+  - {id: "ultramedical_preference:default:train:ChatDoctor,14517", raison: "précaution"}
+  - {id: "ultramedical_preference:default:train:ChatDoctor,17167", raison: "précaution"}
+  - {id: "ultramedical_preference:default:train:ChatDoctor,18909", raison: "précaution"}
+  - {id: "ultramedical_preference:default:train:ChatDoctor,19267", raison: "précaution"}
+  - {id: "ultramedical_preference:default:train:ChatDoctor,19405", raison: "précaution"}
+  - {id: "ultramedical_preference:default:train:ChatDoctor,19497", raison: "précaution"}
+  - {id: "ultramedical_preference:default:train:ChatDoctor,19982", raison: "précaution"}
+  - {id: "ultramedical_preference:default:train:ChatDoctor,2074", raison: "précaution"}
+  - {id: "ultramedical_preference:default:train:ChatDoctor,21681", raison: "précaution"}
+  - {id: "ultramedical_preference:default:train:ChatDoctor,22478", raison: "précaution"}
+  - {id: "ultramedical_preference:default:train:ChatDoctor,2326", raison: "précaution"}
+  - {id: "ultramedical_preference:default:train:ChatDoctor,24240", raison: "précaution"}
+  - {id: "ultramedical_preference:default:train:ChatDoctor,29256", raison: "précaution"}
+  - {id: "ultramedical_preference:default:train:ChatDoctor,29727", raison: "précaution"}
+  - {id: "ultramedical_preference:default:train:ChatDoctor,3414", raison: "précaution"}
+  - {id: "ultramedical_preference:default:train:ChatDoctor,36050", raison: "précaution"}
+  - {id: "ultramedical_preference:default:train:ChatDoctor,386", raison: "précaution"}
+  - {id: "ultramedical_preference:default:train:ChatDoctor,4820", raison: "précaution"}
+  - {id: "ultramedical_preference:default:train:ChatDoctor,5652", raison: "précaution"}
+  - {id: "ultramedical_preference:default:train:ChatDoctor,6273", raison: "précaution"}
+  - {id: "ultramedical_preference:default:train:ChatDoctor,7138", raison: "précaution"}
+  - {id: "ultramedical_preference:default:train:ChatDoctor,768", raison: "précaution"}
+  - {id: "ultramedical_preference:default:train:ChatDoctor,8444", raison: "précaution"}
+  - {id: "ultramedical_preference:default:train:ChatDoctor,8705", raison: "précaution"}
+  - {id: "ultramedical_preference:default:train:ChatDoctor,9500", raison: "précaution"}
+  - {id: "ultramedical_preference:default:validation:ChatDoctor,28529", raison: "précaution"}

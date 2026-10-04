@@ -1,0 +1,10 @@
+# Publication du dataset sur le Hugging Face Hub (python -m src.data.publish_dataset)
+# Le nom d'utilisateur est lu depuis la session « hf auth login ».
+
+repo_name: chsa-triage-medical
+pretty_name: "CHSA — corpus médical bilingue pour SFT et DPO (POC triage)"
+private: true        # à la création ; la visibilité se change ensuite avec --visibilite
+licence: cc-by-4.0   # la plus restrictive des sources, compatible MIT / Apache-2.0 (attribution de chaque source)
+langues: [fr, en]
+task_categories: [text-generation, question-answering]
+tags: [medical, french, english, sft, dpo, triage, anonymized]

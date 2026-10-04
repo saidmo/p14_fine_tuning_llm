@@ -1,0 +1,69 @@
+# Traitement des lieux — messages ChatDoctor (personnes réelles)
+# Principe : la NER spaCy PROPOSE des candidats ; une liste de décisions humaines TRANCHE.
+#   - lieux_confirmes : masqués dans le prompt (recherche directe, insensible à la casse),
+#     et dans les réponses seulement s'ils figurent dans le prompt de la paire (échos)
+#   - pays_conserves, faux_positifs : jamais masqués
+#   - tout autre candidat est « à classer » : à l'intégration, le pipeline s'arrête
+#     tant qu'il en reste (fonctionnement fermé par défaut)
+# Chaque entrée est issue de la relecture exhaustive des candidats (reduce_chatdoctor).
+
+# Villes, États, quartiers et établissements confirmés à la relecture
+lieux_confirmes: [Hawaii, Hyderabad, Agra, Bangalore, bangarole, Kolkata, Toronto, Trivandrum,
+                  Kerala, Florida, Fla, Chesapeake, Guwahati, Savannah, Pooler, Georgia, Ohio, Pune,
+                  Miami, Mumbai, Bombay, Bali, Chennai, Madras, Dubai, Oklahoma, Birmingham,
+                  New York, Newcastle, NSW, Salt Lake City, Pocatello, Idaho, Phoenix, Cape Town,
+                  Delhi, New Delhi, Parbhani, Assam, Panjab, Cuddalore, Trichy, Guam, Manhattan,
+                  Montauk, Long Island, Omaha, Bhopal, Tennessee, Kumbakonam, Kanchipuram, Vellore,
+                  Gonda, Maryland, Marylad, Nagpur, Villivakkam, Walsgrave, Eastview,
+                  Bethesda Naval, Avadh, Scsvmv, U.C.L.A., UCLA, Franklin Square,
+                  GB Pant, krishna hospital, Vijaya health care, NIMHANS, Asra, UW Madison,
+                  Tata Centre, Madras Medical Mission, Mayo Clinic in Phoenix, Jharkhand, Karachi,
+                  Shillong, Faisalabad, Vallore,   # Faisalabad, Vallore : relevés par audit_names
+                  # nouvelle sélection (tirage stable) :
+                  Abu Dhabi, South Carolina, Gandhidham, Gujarat, Siddhartha Hospital, Siddhartha, Kakinada, Brisbane, Princess Alexandra hospital, Riyadh, Aramco, Dammam, Lucknow, West Bengal, Siliguri, Arkansas, NW Ark, Barmer, Rajasthan, London, Visakhapatnam, Andhra Pradesh, "INDO-AMERICAN", Dhaka, Boston, Starship Hospital, Starship, Auckland, Montreal, Kalinga, "Kutch-Gujarat", Kutch, Rajiv Gandhi Cancer Institute, Rajiv Gandhi Cancer, Hershey, Manipur, Tirupati, Dimapur, Nagaland,
+                  San Francisco, Sonora, Sacramento, Thane, Dombivli, Clemson, AZ Heart Institute, AZ Heart, Dover, Ahmedbad, Ahmedabad, Calgary, Alberta, Ontario, North Bay, West Virginia, Newfoundland, St John s, Ram Manohar Lohia, Oregon, Texas, Boulder, Jerusalem, Gorakhpur, Sahara, Nimas, Hosmet, Neera Nursing, Indiranagar, RG KAR, Jabalpur, Missouri, Hassan, Wilkes Barre, Pennsylvania]
+
+# Conservés : pays et grandes régions, non identifiants
+pays_conserves: [india, us, usa, u.s., u.s.a., uk, u.k., united states, the united states,
+                 united kingdom, america, pakistan, canada, australia, uae, united arab emirates,
+                 bangladesh, nepal, sri lanka, philippines, singapore, malaysia, china, japan,
+                 france, germany, italy, spain, switzerland, tunisia, oman, saudi arabia, qatar,
+                 kuwait, egypt, nigeria, kenya, south africa, turkey, iran, iraq, mexico, brazil,
+                 ireland, new zealand, england, scotland, wales, denmark, lebanon, peru, sweden,
+                 afganastan, afghanistan, ghana, ghana africa, haiti, greece, uganda, "uganda-east africa", indonesia, thailand, dominican republic, ethiopia, brunei, ukraine, insia, europe, asia, africa, middle east, the middle east,
+                 east coast, the east coast, west coast, the west coast, mediterranean,
+                 the mediterranean]
+
+# Faux positifs confirmés (médicaments, termes médicaux, mots courants). Les noms de personnes
+# pris pour des lieux sont dans configs/prive/donnees_sensibles.yaml (lieux_faux_positifs).
+# LA retiré des lieux : « mild LA dilation » = oreillette gauche (left atrium)
+faux_positifs: [Duphaston, Geodon, Cigna, Clomid, Mirena, Lyrica, wouldn, biliary atresia,
+                Metoprolol, Neurologist, pregabalin, Omnacortil, Susten, Panadol, Hepatomegaly,
+                Benicar, Withania, OpenAI, Behçet, Urine, Bactrim, Aleve, Lotrimin, kansasii,
+                Drug Eruption, Etizola, Euthyrox, Postinor, Polycystic, Sept, Prostatomegaly,
+                Flagyl, fitts, Banatan, Asthama, nilova, cefuroxime, Zinnat, Lipril, Immotile,
+                Hydrylin, Albuterol, Taenia, Betahistine, Lonazep, irbesartan, Holter,
+                Ventolin, Juvenile, Haven, Thrombophilia, Liptomama, VOTRIENT, Cul-de-sac,
+                beeturia, Tapazole, Bananas, Fertil M medication, Thyroglobulin, LoboZam,
+                Caladryl, Root Canal, the Root Canal, Uveitis, Smt, Filtration Glomerular Rate,
+                Imovane, Triphala, deriphyllin, Sudarshan Kriya, flava, Injectables, Trichomonas,
+                Pregalin M, Sildura, Klonopin, Pleural, Pancreatic, hosptial,
+                Superior Canal Dehiscence Syndrome, Epival, Bile Duct Injury, Donor Sperm/Eggs,
+                Tetany, Cortiscone, Antiemetic, the Tuberculin Skin Test, a Tuberculin Skin Test,
+                pnemonia, Autonomic Dysreflexia, Cystic Hygroma, Subconjunctival, bosentan, ray,
+                idelalisib, Ketoprofen, morpho, Bilirubin, fort, Hbsag, HBsAg, gand, Fefol, URTI,
+                the Liver Plasma Membrane, Rozavel F, jandis, nan, jan, jan., Jan., ma, mt, md,
+                ia, Hct, LA, Keppra, Aldara, Residence Visa, Tenacsin, Edima, PASTY STOOLS, Paxil,
+                Birth Control, Eosinophil, ramipril, Accident, Geodon for Major, Xray, Spleen,
+                Concerta, Welbrutrin, aaya, D&C, ON FIRST REPORT OF, Nonveg, URGGENT,
+                THE WHITE AREA, lyrica tab, lamina propria, the wisdom tees weeks ago, Meropenem,
+                artesia, unusualy, Uretha, Flight, Ultrasound Lower, Hep, Albutera L, Narcan, High,
+                Levaquin, Zulu, Aug, Advanced, monticope, drinked, Fybromyalgia, German, Elserum,
+                Hemoglobulin, HCT Hemoglobulin, pencillin, dre, consultan, Rumatologis, nova,
+                asthalin, delaware, GRAM NEGATIVE RODS, enderogermena, disnia, University,
+                Teritory, y.o., AR and PH, vertibrae,
+                the VA hospital,   # VA : réseau national des hôpitaux d'anciens combattants, non identifiant
+                # St. Jude : marque de stimulateur cardiaque (« a St. Jude pacemaker »)
+                normal Spleen Normal, withinn, Yasmin, wIthaca, xoponex, nausua, Pnemothrox, bumaba sa, qureing, Retuxin, Ridalin, ngo, neropathy, gradualy, NW Ark PS I don, Drrecommended Ct. Children, portal, astelin, Rhinosinusitis, Prozac, Metformine, Doulouex, worryed, Biophsy, Beandryl, Diabetis, Tourch, Prednisone, Arava, auro, Novotone, tamflo, Prolactic, Hydroxyprogesterone, Diabetic, MELISA, Gabapentin, Renal Abnormality, xoladan, Nurofibroma, pregnacy discarge, schizophernia, PLAYS FOOTBALL WITH HIS, Pitts, Mir, Broncitis, Yestersay, feilds, mt lower vertabre, Ceftum, St. Jude, gulf, Western,
+                # Mayo, NewYork-Presbyterian, Weill Cornell : laboratoire ou publication cités, ne localisent pas le patient
+                medicene, Foracort, Himalaya, proplem, Holopathy, vajrasana, sarvangasana, halasana, Romilast, Vibrania, Diprospan, Encephalomalacia, the Occipital region Bilateral, Troponin, Bifilac HP, Androcur, pnuemonia, Mayo, "NewYork-Presbyterian", Weill Cornell, Lung, RED Area, stunn, Stemedil, speach, Creatinine, "M-F", Osteal, Rocklin, Nuero, Vicadine, FROM APOLLO, Dieititan]   # Dieititan : faute de frappe pour dietitian

@@ -1,0 +1,12 @@
+# Phase 1 — préparation des données (poste local, CPU)
+# Les dépendances d'entraînement et de déploiement sont dans des fichiers séparés.
+# Modèles spaCy : python -m spacy download fr_core_news_md / en_core_web_md
+datasets
+huggingface_hub
+transformers
+numpy
+pyyaml
+spacy
+presidio-analyzer
+presidio-anonymizer
+pytest

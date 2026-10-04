@@ -1,0 +1,31 @@
+# Environnement Python
+.venv/
+__pycache__/
+*.pyc
+.pytest_cache/
+
+# Secrets et paramètres sensibles (noms de personnes réelles)
+configs/prive/
+.env
+*.token
+
+# Données : versionnées sur le Hugging Face Hub, pas dans Git
+data/raw/
+data/interim/
+data/processed/
+
+# Artefacts d'entraînement
+checkpoints/
+outputs/
+mlruns/
+wandb/
+*.safetensors
+*.bin
+
+# IDE / OS
+.vscode/
+.idea/
+Thumbs.db
+
+# Documentation
+docs/

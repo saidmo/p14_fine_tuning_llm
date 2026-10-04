@@ -1,0 +1,99 @@
+{
+  "generated_at": "2026-10-04T19:56:22+00:00",
+  "jeux": {
+    "dpo_train": {
+      "paires_chatdoctor": 1500,
+      "paires_modifiees": 651,
+      "regles": {
+        "salutation_ouverture": 787,
+        "signature": 54,
+        "presentation": 53,
+        "provenance": 11,
+        "salutation_nominative": 3
+      },
+      "caracteres_avant": 7869767,
+      "caracteres_supprimes": 8795,
+      "prompts_trop_courts": 0,
+      "dates_generalisees": {
+        "date_jour_mois": 54,
+        "date_mois_jour": 152,
+        "date_numerique": 21
+      },
+      "lieux_masques": 91,
+      "lieux_echos": 126,
+      "lieux_ecartes": {
+        "sigle": 19,
+        "forme": 44,
+        "faux_positif": 93,
+        "pays_ou_region": 50
+      },
+      "lieux_a_classer": 0,
+      "textes_avec_prenom_lexique_avant": 215,
+      "textes_avec_prenom_lexique_apres": 98,
+      "part_supprimee": 0.0011
+    },
+    "dpo_validation": {
+      "paires_chatdoctor": 130,
+      "paires_modifiees": 53,
+      "regles": {
+        "provenance": 2,
+        "salutation_ouverture": 76,
+        "presentation": 9,
+        "signature": 10,
+        "salutation_nominative": 1
+      },
+      "caracteres_avant": 682130,
+      "caracteres_supprimes": 1137,
+      "prompts_trop_courts": 0,
+      "dates_generalisees": {
+        "date_jour_mois": 2,
+        "date_mois_jour": 13
+      },
+      "lieux_masques": 7,
+      "lieux_echos": 19,
+      "lieux_ecartes": {
+        "faux_positif": 12,
+        "forme": 2,
+        "pays_ou_region": 7,
+        "sigle": 2
+      },
+      "lieux_a_classer": 0,
+      "textes_avec_prenom_lexique_avant": 43,
+      "textes_avec_prenom_lexique_apres": 16,
+      "part_supprimee": 0.0017
+    },
+    "dpo_test": {
+      "paires_chatdoctor": 93,
+      "paires_modifiees": 42,
+      "regles": {
+        "salutation_ouverture": 55,
+        "signature": 8,
+        "presentation": 2,
+        "provenance": 2
+      },
+      "caracteres_avant": 470552,
+      "caracteres_supprimes": 733,
+      "prompts_trop_courts": 0,
+      "dates_generalisees": {
+        "date_numerique": 2,
+        "date_mois_jour": 5,
+        "date_jour_mois": 2
+      },
+      "lieux_masques": 2,
+      "lieux_echos": 0,
+      "lieux_ecartes": {
+        "faux_positif": 8,
+        "sigle": 2,
+        "pays_ou_region": 6,
+        "forme": 3
+      },
+      "lieux_a_classer": 0,
+      "textes_avec_prenom_lexique_avant": 24,
+      "textes_avec_prenom_lexique_apres": 13,
+      "part_supprimee": 0.0016
+    }
+  },
+  "lieux_masques_uniques": 73,
+  "candidats_ecartes_uniques": 193,
+  "candidats_a_classer_uniques": 0
+}

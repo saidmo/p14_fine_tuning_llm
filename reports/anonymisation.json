@@ -1,0 +1,533 @@
+{
+  "jeux": {
+    "eval_clinique": {
+      "generated_at": "2026-10-04T12:13:31+00:00",
+      "enregistrements": 263,
+      "enregistrements_modifies": 122,
+      "entites_masquees": {
+        "PERSON": 197
+      },
+      "eponymes_neutralises": 0,
+      "paires_chatdoctor": 0,
+      "reduction_chatdoctor": {},
+      "audit_residuel": {
+        "textes_audites": 300,
+        "candidats": 95
+      }
+    },
+    "sft_train": {
+      "generated_at": "2026-10-04T12:07:29+00:00",
+      "enregistrements": 5000,
+      "enregistrements_modifies": 691,
+      "entites_masquees": {
+        "PERSON": 948,
+        "URL": 11,
+        "PHONE_NUMBER": 20
+      },
+      "eponymes_neutralises": 28,
+      "paires_chatdoctor": 0,
+      "reduction_chatdoctor": {},
+      "audit_residuel": {
+        "textes_audites": 300,
+        "candidats": 247
+      }
+    },
+    "sft_validation": {
+      "generated_at": "2026-10-04T12:07:58+00:00",
+      "enregistrements": 500,
+      "enregistrements_modifies": 67,
+      "entites_masquees": {
+        "PERSON": 90
+      },
+      "eponymes_neutralises": 1,
+      "paires_chatdoctor": 0,
+      "reduction_chatdoctor": {},
+      "audit_residuel": {
+        "textes_audites": 300,
+        "candidats": 203
+      }
+    },
+    "sft_test": {
+      "generated_at": "2026-10-04T12:13:05+00:00",
+      "enregistrements": 8821,
+      "enregistrements_modifies": 815,
+      "entites_masquees": {
+        "PERSON": 1099,
+        "PHONE_NUMBER": 5,
+        "URL": 8
+      },
+      "eponymes_neutralises": 48,
+      "paires_chatdoctor": 0,
+      "reduction_chatdoctor": {},
+      "audit_residuel": {
+        "textes_audites": 300,
+        "candidats": 241
+      }
+    },
+    "dpo_train": {
+      "generated_at": "2026-10-04T12:22:10+00:00",
+      "enregistrements": 3000,
+      "enregistrements_modifies": 114,
+      "entites_masquees": {
+        "PERSON": 180,
+        "PHONE_NUMBER": 16,
+        "URL": 12
+      },
+      "eponymes_neutralises": 31,
+      "paires_chatdoctor": 1500,
+      "reduction_chatdoctor": {
+        "salutation_ouverture": 787,
+        "date_generalisee": 227,
+        "lieu_masque": 217,
+        "signature": 54,
+        "presentation": 53,
+        "provenance": 11,
+        "salutation_nominative": 3
+      },
+      "audit_residuel": {
+        "textes_audites": 300,
+        "candidats": 230
+      }
+    },
+    "dpo_validation": {
+      "generated_at": "2026-10-04T12:23:14+00:00",
+      "enregistrements": 300,
+      "enregistrements_modifies": 12,
+      "entites_masquees": {
+        "PERSON": 20
+      },
+      "eponymes_neutralises": 0,
+      "paires_chatdoctor": 130,
+      "reduction_chatdoctor": {
+        "provenance": 2,
+        "date_generalisee": 15,
+        "lieu_masque": 26,
+        "salutation_ouverture": 76,
+        "presentation": 9,
+        "signature": 10,
+        "salutation_nominative": 1
+      },
+      "audit_residuel": {
+        "textes_audites": 300,
+        "candidats": 248
+      }
+    },
+    "dpo_test": {
+      "generated_at": "2026-10-04T12:25:35+00:00",
+      "enregistrements": 777,
+      "enregistrements_modifies": 29,
+      "entites_masquees": {
+        "PERSON": 65,
+        "EMAIL_ADDRESS": 2,
+        "URL": 5
+      },
+      "eponymes_neutralises": 5,
+      "paires_chatdoctor": 93,
+      "reduction_chatdoctor": {
+        "salutation_ouverture": 55,
+        "date_generalisee": 9,
+        "lieu_masque": 2,
+        "signature": 8,
+        "presentation": 2,
+        "provenance": 2
+      },
+      "audit_residuel": {
+        "textes_audites": 300,
+        "candidats": 217
+      }
+    }
+  },
+  "configuration": {
+    "modeles_spacy": {
+      "fr": "fr_core_news_md",
+      "en": "en_core_web_md"
+    },
+    "ner_spacy": [],
+    "seuils": {
+      "PERSON": 0.5,
+      "EMAIL_ADDRESS": 0.5,
+      "PHONE_NUMBER": 0.4,
+      "URL": 0.5
+    },
+    "regions_telephone": [
+      "FR",
+      "US",
+      "GB",
+      "IN"
+    ],
+    "remplacements": {
+      "fr": {
+        "PERSON": "[NOM]",
+        "EMAIL_ADDRESS": "[EMAIL]",
+        "PHONE_NUMBER": "[TELEPHONE]",
+        "URL": "[URL]"
+      },
+      "en": {
+        "PERSON": "[NAME]",
+        "EMAIL_ADDRESS": "[EMAIL]",
+        "PHONE_NUMBER": "[PHONE]",
+        "URL": "[URL]"
+      }
+    },
+    "civilites": {
+      "fr": [
+        "Monsieur",
+        "Madame",
+        "Mademoiselle",
+        "Mme",
+        "Mlle",
+        "Melle",
+        "Mr",
+        "M.",
+        "Dr",
+        "Docteur",
+        "Pr",
+        "Professeur"
+      ],
+      "en": [
+        "Mr",
+        "Mrs",
+        "Ms",
+        "Miss",
+        "Dr",
+        "Doctor",
+        "Prof",
+        "Smt",
+        "Shri",
+        "Sri"
+      ]
+    },
+    "civilites_casse_libre": {
+      "fr": [
+        "Monsieur",
+        "Madame",
+        "Mademoiselle"
+      ],
+      "en": [
+        "Smt",
+        "Shri",
+        "Sri"
+      ]
+    },
+    "lexique_prenoms": {
+      "fr": "configs/prenoms_fr.txt",
+      "en": "configs/prenoms_en.txt"
+    },
+    "lexique_casse_libre": [
+      "en"
+    ],
+    "liste_noire": {
+      "fr": [
+        "aH"
+      ],
+      "en": []
+    },
+    "mots_non_noms": {
+      "fr": [
+        "Question",
+        "Questions",
+        "Quel",
+        "Quelle",
+        "Quels",
+        "Quelles",
+        "Que",
+        "Qu",
+        "Quoi",
+        "Comment",
+        "Pourquoi",
+        "Il",
+        "Elle",
+        "Ils",
+        "Elles",
+        "On",
+        "Vous",
+        "Nous",
+        "Son",
+        "Sa",
+        "Ses",
+        "Ce",
+        "Cet",
+        "Cette",
+        "Ces",
+        "Un",
+        "Une",
+        "Des",
+        "Au",
+        "Aux",
+        "En",
+        "Dans",
+        "Après",
+        "Avant",
+        "Pendant",
+        "Depuis",
+        "Lors",
+        "Par",
+        "Pour",
+        "Sur",
+        "Chez",
+        "Et",
+        "Mais",
+        "Puis",
+        "Alors",
+        "Cependant",
+        "Votre",
+        "Vos",
+        "Leur",
+        "Leurs",
+        "Aucun",
+        "Aucune",
+        "Réponse",
+        "Selon",
+        "Durant",
+        "Devant",
+        "Malgré",
+        "Concernant",
+        "Pourtant",
+        "Ensuite",
+        "Enfin",
+        "Ainsi",
+        "Toutefois",
+        "Néanmoins",
+        "Si",
+        "Lorsque",
+        "Quand",
+        "Comme",
+        "Hier",
+        "Est",
+        "Sont",
+        "Présente"
+      ],
+      "en": [
+        "Question",
+        "The",
+        "A",
+        "An",
+        "He",
+        "She",
+        "They",
+        "It",
+        "His",
+        "Her",
+        "I",
+        "We",
+        "You",
+        "What",
+        "Which",
+        "How",
+        "Why",
+        "When",
+        "After",
+        "Before",
+        "On",
+        "In",
+        "At",
+        "Is",
+        "Was",
+        "Has",
+        "Had",
+        "This",
+        "That",
+        "Answer",
+        "My",
+        "Your",
+        "Our",
+        "These",
+        "Those",
+        "Now",
+        "There",
+        "Here",
+        "Here's",
+        "It's",
+        "If",
+        "Since",
+        "Some",
+        "Also",
+        "So",
+        "Thus",
+        "Hence",
+        "However",
+        "Therefore",
+        "Only",
+        "Keep",
+        "Thanks",
+        "Thank",
+        "Please",
+        "Kindly",
+        "Advise",
+        "Advised",
+        "Hope",
+        "Sir",
+        "Do",
+        "Share",
+        "Sometimes",
+        "Will",
+        "Yes",
+        "No"
+      ]
+    },
+    "mots_non_noms_contexte": {
+      "en": [
+        "doctor",
+        "doc",
+        "dr",
+        "sir",
+        "madam",
+        "mam",
+        "maam",
+        "there",
+        "all",
+        "team",
+        "everyone",
+        "friend",
+        "friends",
+        "patient",
+        "again",
+        "so",
+        "much",
+        "lot",
+        "advance",
+        "very",
+        "not",
+        "from",
+        "the",
+        "my",
+        "and",
+        "for",
+        "you",
+        "your",
+        "help",
+        "reply",
+        "response",
+        "answer",
+        "time",
+        "regards",
+        "sincerely",
+        "user",
+        "doctors",
+        "drs",
+        "docs"
+      ],
+      "fr": [
+        "docteur",
+        "madame",
+        "monsieur",
+        "tous",
+        "toutes",
+        "merci",
+        "cordialement"
+      ]
+    },
+    "eponymes": {
+      "mots_avant": [
+        "maladie",
+        "maladies",
+        "syndrome",
+        "syndromes",
+        "signe",
+        "signes",
+        "test",
+        "tests",
+        "épreuve",
+        "séquence",
+        "cri",
+        "cris",
+        "abcès",
+        "orphan",
+        "réaction",
+        "réflexe",
+        "manœuvre",
+        "manœuvres",
+        "manoeuvre",
+        "manoeuvres",
+        "coloration",
+        "type",
+        "classification",
+        "score",
+        "critère",
+        "critères",
+        "triade",
+        "loi",
+        "méthode",
+        "technique",
+        "opération",
+        "intervention",
+        "tumeur",
+        "lymphome",
+        "sarcome",
+        "ulcère",
+        "kyste",
+        "cellule",
+        "cellules",
+        "corps",
+        "canal",
+        "ligament",
+        "bacille",
+        "indice",
+        "stade",
+        "règle",
+        "phénomène",
+        "fracture",
+        "paralysie",
+        "hernie",
+        "diverticule",
+        "anneau",
+        "nodule",
+        "nodules",
+        "pouch",
+        "cul-de-sac",
+        "poche",
+        "espace",
+        "space"
+      ],
+      "mots_apres": [
+        "disease",
+        "syndrome",
+        "sign",
+        "test",
+        "reaction",
+        "reflex",
+        "maneuver",
+        "manoeuvre",
+        "classification",
+        "score",
+        "criteria",
+        "triad",
+        "law",
+        "method",
+        "procedure",
+        "operation",
+        "tumor",
+        "tumour",
+        "lymphoma",
+        "sarcoma",
+        "ulcer",
+        "cyst",
+        "cell",
+        "cells",
+        "body",
+        "bodies",
+        "canal",
+        "phenomenon",
+        "palsy",
+        "fracture",
+        "node",
+        "nodes",
+        "hernia",
+        "diverticulum",
+        "virus",
+        "pouch",
+        "space",
+        "sequence"
+      ],
+      "liste_blanche": []
+    },
+    "taille_echantillon_revue": 40,
+    "audit_residuel": {
+      "langues": [
+        "fr",
+        "en"
+      ],
+      "echantillon": 300
+    }
+  }
+}

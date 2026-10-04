@@ -1,0 +1,106 @@
+# Anonymisation des jeux sélectionnés — POC triage CHSA
+# Choix validés : masquer noms et coordonnées ; conserver lieux et âges
+# (information clinique) ; ne pas masquer les éponymes médicaux.
+# Principe : des règles précises MASQUENT (civilités, lexique, contextes, coordonnées) ;
+# la NER spaCy, à fort rappel mais faible précision, sert uniquement à l'AUDIT.
+
+modeles_spacy:
+  fr: fr_core_news_md
+  en: en_core_web_md
+
+# NER spaCy utilisée pour masquer : aucune langue, après mesure sur échantillons relus :
+#   fr (eval_clinique, 40 masquages) : précision ~40 % (médicaments, signes, germes)
+#   en (jeux DPO, 120 masquages)     : précision ~6 % (médicaments, options de QCM, unités)
+ner_spacy: []
+
+# Seuil de score par type d'entité (les types listés ici sont ceux recherchés).
+# PhoneRecognizer attribue 0,4 sans mot de contexte : mesuré avec --demo, d'où un seuil
+# propre ; le format reste vérifié par la bibliothèque phonenumbers.
+seuils:
+  PERSON: 0.5
+  EMAIL_ADDRESS: 0.5
+  PHONE_NUMBER: 0.4
+  URL: 0.5
+regions_telephone: [FR, US, GB, IN]
+
+remplacements:
+  fr: {PERSON: "[NOM]", EMAIL_ADDRESS: "[EMAIL]", PHONE_NUMBER: "[TELEPHONE]", URL: "[URL]"}
+  en: {PERSON: "[NAME]", EMAIL_ADDRESS: "[EMAIL]", PHONE_NUMBER: "[PHONE]", URL: "[URL]"}
+
+# Civilité suivie d'une initiale ou d'un nom : la civilité est conservée, le nom masqué.
+civilites:
+  fr: [Monsieur, Madame, Mademoiselle, Mme, Mlle, Melle, Mr, M., Dr, Docteur, Pr, Professeur]
+  en: [Mr, Mrs, Ms, Miss, Dr, Doctor, Prof, Smt, Shri, Sri]   # Smt/Shri : civilités indiennes
+
+# Civilités reconnues quelle que soit la casse. En français, "madame S. Fatima" en milieu
+# de phrase est un usage normal. En anglais, aucune : "your doctor. They can…" faisait
+# prendre "They" pour un nom (mesuré sur dpo_train).
+civilites_casse_libre:
+  fr: [Monsieur, Madame, Mademoiselle]
+  en: [Smt, Shri, Sri]          # civilités indiennes, souvent en minuscules (« smt. ») ; pas des mots anglais
+
+# Lexiques de prénoms masqués sans civilité ("Cas clinique : Marianne G. 20 ans")
+lexique_prenoms:
+  fr: configs/prenoms_fr.txt
+  en: configs/prenoms_en.txt
+# Lexiques reconnus quelle que soit la casse (prénoms souvent écrits en minuscules par les patients)
+lexique_casse_libre: [en]
+
+# Liste noire : formes atypiques repérées par l'audit, hors lexique
+liste_noire:
+  fr: [aH]            # « Cas clinique : Mme aH. âgée de 40 ans »
+  en: []              # noms de personnes réelles : configs/prive/donnees_sensibles.yaml (non versionné)
+
+# Mots qui ne peuvent pas faire partie d'un nom après une civilité, ni en 1re position
+# ("Dr. Thanks", "Doctor. I") ni ensuite ("Monsieur G. Quelles sont…").
+# "On", "No", "Yes" entre guillemets : sinon YAML 1.1 les lit comme des booléens.
+# Articles (Le, La, De, Du) volontairement absents : noms à particule présents ("M. Le V. Joseph").
+mots_non_noms:
+  fr: [Question, Questions, Quel, Quelle, Quels, Quelles, Que, Qu, Quoi, Comment, Pourquoi,
+       Il, Elle, Ils, Elles, "On", Vous, Nous, Son, Sa, Ses, Ce, Cet, Cette, Ces, Un, Une, Des,
+       Au, Aux, En, Dans, Après, Avant, Pendant, Depuis, Lors, Par, Pour, Sur, Chez, Et,
+       Mais, Puis, Alors, Cependant, Votre, Vos, Leur, Leurs, Aucun, Aucune, Réponse,
+       Selon, Durant, Devant, Malgré, Concernant, Pourtant, Ensuite, Enfin, Ainsi,
+       Toutefois, Néanmoins, Si, Lorsque, Quand, Comme, Hier, Est, Sont, Présente]
+  en: [Question, The, A, An, He, She, They, It, His, Her, I, We, You, What, Which, How,
+       Why, When, After, Before, "On", In, At, Is, Was, Has, Had, This, That, Answer,
+       My, Your, Our, These, Those, Now, There, Here, "Here's", "It's", If, Since, Some,
+       Also, So, Thus, Hence, However, Therefore, Only, Keep, Thanks, Thank, Please,
+       Kindly, Advise, Advised, Hope, Sir, Do, Share, Sometimes, Will, "Yes", "No"]
+
+# Motifs de contexte (présentation, salutation, signature) : mots qui ne sont jamais
+# un nom à cet endroit ("Hello Doctor,", "Thanks doctor", "my name is not important")
+mots_non_noms_contexte:
+  en: [doctor, doc, dr, sir, madam, mam, maam, there, all, team, everyone, friend, friends,
+       patient, again, so, much, lot, advance, very, not, from, the, my, and, for, you,
+       your, help, reply, response, answer, time, regards, sincerely, user, doctors, drs, docs]
+  fr: [docteur, madame, monsieur, tous, toutes, merci, cordialement]
+
+# Une entité PERSON n'est pas masquée si elle est un éponyme médical :
+#   - précédée d'un de ces mots ("maladie de Parkinson", "test de Coombs")
+#   - suivie d'un de ces mots ("Addison's disease", "Crohn disease")
+#   - terminée ou suivie par ® ou ™ (nom de spécialité : "Lasilix®")
+#   - présente dans la liste blanche (à compléter après relecture)
+eponymes:
+  mots_avant: [maladie, maladies, syndrome, syndromes, signe, signes, test, tests, épreuve,
+               séquence, cri, cris, abcès, orphan,   # séquence de Pierre Robin, cri du Douglas, Orphan Annie
+               réaction, réflexe, manœuvre, manœuvres, manoeuvre, manoeuvres, coloration, type,
+               classification, score, critère, critères, triade, loi, méthode, technique,
+               opération, intervention, tumeur, lymphome, sarcome, ulcère, kyste, cellule,
+               cellules, corps, canal, ligament, bacille, indice, stade, règle, phénomène,
+               fracture, paralysie, hernie, diverticule, anneau, nodule, nodules, pouch,
+               cul-de-sac, poche, espace, space]          # pouch of Douglas, cul-de-sac de Douglas
+  mots_apres: [disease, syndrome, sign, test, reaction, reflex, maneuver, manoeuvre,
+               classification, score, criteria, triad, law, method, procedure, operation,
+               tumor, tumour, lymphoma, sarcoma, ulcer, cyst, cell, cells, body, bodies,
+               canal, phenomenon, palsy, fracture, node, nodes, hernia, diverticulum, virus,
+               pouch, space, sequence]                     # Morison's pouch, Pierre Robin sequence
+  liste_blanche: []
+
+taille_echantillon_revue: 40
+
+# Contrôle des noms non masqués : la NER spaCy (fort rappel, faible précision) est appliquée
+# au texte anonymisé d'un échantillon ; ses entités PER restantes sont listées pour relecture.
+audit_residuel:
+  langues: [fr, en]
+  echantillon: 300

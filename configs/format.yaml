@@ -1,0 +1,16 @@
+# Formatage final des jeux — POC triage CHSA (python -m src.data.build_dataset)
+# Les longueurs maximales sont lues dans configs/selection.yaml (une seule source de vérité).
+
+# Consigne système, identique pour tous les exemples (SFT et DPO, français et anglais).
+# Elle décrit le rôle sans imposer de comportement absent des données d'entraînement
+# (sinon le modèle reçoit un signal contradictoire entre la consigne et les réponses).
+system_prompt: >-
+  Tu es l'assistant médical du service des urgences du Centre Hospitalier Saint-Aurélien (CHSA).
+  Tu aides le personnel soignant et les patients en répondant avec exactitude aux questions
+  médicales, dans la langue de la question.
+
+tokenizer: Qwen/Qwen3-1.7B-Base
+# Si le tokenizer Base ne fournit pas de chat template, celui du modèle instruct est utilisé :
+# même vocabulaire, même format de conversation (ChatML de Qwen3).
+chat_template_source: Qwen/Qwen3-1.7B
+enable_thinking: false        # mode « réflexion » de Qwen3 désactivé, à l'entraînement comme à l'inférence

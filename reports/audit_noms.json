@@ -1,0 +1,39 @@
+{
+  "generated_at": "2026-10-04T18:22:51+00:00",
+  "statut": "valide",
+  "textes_audites": {
+    "sft_train": 10000,
+    "sft_validation": 1000,
+    "sft_test": 17642,
+    "eval_clinique": 526,
+    "dpo_train": 9000,
+    "dpo_validation": 900,
+    "dpo_test": 2331
+  },
+  "total_textes": 41399,
+  "entites_per": 41813,
+  "filtres_automatiques": {
+    "vocabulaire_minuscule": 25684,
+    "eponyme": 3851,
+    "forme": 2835,
+    "civilite": 1287,
+    "sigle_ou_code": 1153,
+    "decision_non_nom": 774,
+    "marque": 513,
+    "morphologie_medicale": 472
+  },
+  "revue_exhaustive": "personnes_reelles",
+  "textes_par_perimetre": {
+    "cas_fictifs_et_editoriaux": 36230,
+    "personnes_reelles": 5169
+  },
+  "candidats_total": 3165,
+  "candidats_par_perimetre": {
+    "personnes_reelles": 0,
+    "cas_fictifs_et_editoriaux": 3165,
+    "prenoms_du_lexique_non_masques": 0
+  },
+  "candidats_bloquants": 0,
+  "exemples_exclus_cumules": 32,
+  "exemples_exclus_encore_presents": 0
+}

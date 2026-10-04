@@ -1,0 +1,63 @@
+# Composition des datasets SFT et DPO — POC triage CHSA
+# Toute modification de ce fichier change les données : relancer src.data.select
+# et citer la version utilisée dans le rapport.
+
+seed: 42
+tokenizer: Qwen/Qwen3-1.7B-Base
+
+sft:
+  max_seq_length: 1024        # longueur max d'un exemple formaté (tokens)
+  marge_template: 96          # réservée au message system + chat template
+  total_train: 5000           # exigence de la mission : contrôlée automatiquement
+
+  # Ordre important : les blocs avec "complement" sont complétés après les autres
+  blocs:
+    mediqal:
+      source: mediqal
+      configs: [mcqu, mcqm]
+      train: 2500
+      validation: 250
+      sujets_exclus: [Histology, Embryology, Cytology, Anatomy]
+      priorite: clinique      # cas clinique ou question de raisonnement d'abord
+
+    frenchmedmcqa:
+      source: frenchmedmcqa
+      train: 300
+      validation: 30
+
+    medquad:
+      source: medquad
+      train: 1400
+      validation: 140
+      qtypes: [information, symptoms, treatment, causes, exams and tests,
+               complications, prevention, outlook, susceptibility]
+
+    triage:
+      fichier: data/interim/triage_synthetique.jsonl   # généré plus tard
+      train: 800
+      validation: 80
+      complement: mediqal     # si le fichier est absent ou insuffisant
+
+  # MedQuAD n'a pas de split officiel : découpage déterministe par hash de la clé
+  split_medquad:
+    test_pct: 5
+    validation_pct: 5
+
+  eval_clinique:
+    source: mediqal
+    config: oeq
+    sujets: [Emergency Medicine, Intensive Care]
+
+dpo:
+  max_prompt_length: 512
+  max_length: 1536            # prompt + réponse la plus longue
+  marge_template: 96
+  label_types: [hard, easy]   # "length" exclu : préférence fondée sur la longueur
+  quotas_train:
+    ChatDoctor: 1500          # messages de patients : le plus proche du triage
+    MedQA: 750                # vignettes cliniques
+    MedQA-Evol: 750
+  quotas_validation:
+    ChatDoctor: 130
+    MedQA: 85
+    MedQA-Evol: 85

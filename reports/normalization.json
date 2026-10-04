@@ -1,0 +1,86 @@
+{
+  "sources": {
+    "frenchmedmcqa": {
+      "generated_at": "2026-10-02T05:50:54+00:00",
+      "revision": "6195120803580d171cbf2172c0beac03f21d14fb",
+      "ecrits": {
+        "train": 595,
+        "validation": 164,
+        "test": 321
+      },
+      "taches": {
+        "mcq_single": 1080
+      },
+      "rejets": {},
+      "transformations": {
+        "espaces_multiples": 575,
+        "unicode_nfc": 56
+      }
+    },
+    "mediqal": {
+      "generated_at": "2026-10-02T05:50:52+00:00",
+      "revision": "5af34948a74c7b8807c476204a21149ffb00ea2c",
+      "ecrits": {
+        "train": 15880,
+        "validation": 4027,
+        "test": 12696
+      },
+      "taches": {
+        "mcq_single": 17017,
+        "mcq_multi": 10617,
+        "open_qa": 4969
+      },
+      "rejets": {},
+      "transformations": {
+        "fins_de_ligne": 2762,
+        "puces_corrompues": 50,
+        "espaces_multiples": 4051,
+        "espaces_fin_de_ligne": 1657,
+        "sauts_de_ligne_multiples": 125,
+        "espaces_bordure": 69,
+        "ponctuation_repetee": 2,
+        "libelle_normalise": 15,
+        "unicode_nfc": 357
+      }
+    },
+    "medquad": {
+      "generated_at": "2026-10-02T05:51:00+00:00",
+      "revision": "5b0961fbaa6d7f9c344c5d59c29943fb900c2eca",
+      "ecrits": {
+        "unsplit": 16407
+      },
+      "taches": {
+        "open_qa": 16407
+      },
+      "rejets": {},
+      "transformations": {
+        "ponctuation_repetee": 322,
+        "espaces_multiples": 7985,
+        "espaces_fin_de_ligne": 2098,
+        "sauts_de_ligne_multiples": 607,
+        "espaces_bordure": 2
+      }
+    },
+    "ultramedical_preference": {
+      "generated_at": "2026-10-02T05:52:59+00:00",
+      "revision": "761eb7935310ba662a96d93c5af342e5269d5759",
+      "ecrits": {
+        "train": 109353,
+        "validation": 2232,
+        "test": 777
+      },
+      "taches": {
+        "dpo": 112362
+      },
+      "rejets": {},
+      "transformations": {
+        "espaces_bordure": 76895,
+        "espaces_multiples": 18863,
+        "espaces_fin_de_ligne": 18291,
+        "ponctuation_repetee": 982,
+        "sauts_de_ligne_multiples": 48,
+        "fins_de_ligne": 36
+      }
+    }
+  }
+}

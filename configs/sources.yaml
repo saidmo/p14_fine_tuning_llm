@@ -1,0 +1,38 @@
+# Registre des sources de données — POC triage CHSA
+# Point d'entrée unique : tout script de données lit ce fichier.
+# "licence" est à compléter après lecture de chaque dataset card (le script
+# d'exploration remonte la licence déclarée sur le Hub pour faciliter le contrôle).
+
+sources:
+  - name: mediqal
+    hf_id: ANR-MALADES/MediQAl
+    langue: fr
+    role_prevu: sft
+    licence:  Creative Commons Attribution 4.0 International (CC BY 4.0)
+    revision: 5af34948a74c7b8807c476204a21149ffb00ea2c
+    niveau_confiance: eleve    # questions d'examens rédigées par des enseignants
+
+  - name: frenchmedmcqa
+    hf_id: nthngdy/frenchmedmcqa
+    langue: fr
+    role_prevu: sft
+    licence: Apache-2.0
+    revision: 6195120803580d171cbf2172c0beac03f21d14fb
+    remarque: miroir limité aux 1 080 questions à réponse unique (sur 3 105) ; licence lue sur la card originale
+    niveau_confiance: eleve    # examens corrigés par des experts
+
+  - name: medquad
+    hf_id: keivalya/MedQuad-MedicalQnADataset
+    langue: en
+    role_prevu: sft
+    licence: Creative Commons Attribution 4.0 International (CC BY 4.0)
+    revision: 5b0961fbaa6d7f9c344c5d59c29943fb900c2eca
+    niveau_confiance: eleve    # sites du NIH (les Instituts nationaux de la santé américains) et de l'OMS (Organisation mondiale de la santé )
+
+  - name: ultramedical_preference
+    hf_id: TsinghuaC3I/UltraMedical-Preference
+    langue: en
+    role_prevu: dpo
+    licence: MIT
+    revision: 761eb7935310ba662a96d93c5af342e5269d5759
+    niveau_confiance: moyen    # préférences jugées par GPT-4, pas par des cliniciens

@@ -1,0 +1,48 @@
+{
+  "generated_at": "2026-10-01T14:41:06+00:00",
+  "sources": [
+    {
+      "name": "medquad",
+      "hf_id": "keivalya/MedQuad-MedicalQnADataset",
+      "langue": "en",
+      "role_prevu": "sft",
+      "licence": "a_verifier",
+      "revision": "5b0961fbaa6d7f9c344c5d59c29943fb900c2eca",
+      "licence_card": null,
+      "gated": false,
+      "configs": {
+        "default": {
+          "splits": {
+            "train": {
+              "num_rows": 16407,
+              "features": {
+                "qtype": "Value('large_string')",
+                "Question": "Value('large_string')",
+                "Answer": "Value('large_string')"
+              },
+              "text_lengths": {
+                "qtype": {
+                  "median": 9,
+                  "max": 15
+                },
+                "Question": {
+                  "median": 49,
+                  "max": 111
+                },
+                "Answer": {
+                  "median": 553,
+                  "max": 14441
+                }
+              },
+              "example": {
+                "qtype": "susceptibility",
+                "Question": "Who is at risk for Lymphocytic Choriomeningitis (LCM)? ?",
+                "Answer": "LCMV infections can occur after exposure to fresh urine, droppings, saliva, or nesting materials from infected rodents.  Transmission may also occur when these materials are directly introduced into broken skin, the nose, the eyes, or the mouth, or presumably, via the bite of an infected rodent. Per…"
+              }
+            }
+          }
+        }
+      }
+    }
+  ]
+}
