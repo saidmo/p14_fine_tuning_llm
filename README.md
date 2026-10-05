@@ -4,7 +4,7 @@ Fine-tuning de **Qwen3-1.7B-Base** par **SFT avec LoRA**, puis alignement par pr
 (**DPO**), sur un corpus médical bilingue français / anglais ; déploiement d'un endpoint de
 démonstration servi par **vLLM** derrière une API **FastAPI**, avec un pipeline **CI/CD GitHub Actions**.
 
-> ⚠️ **Projet pédagogique** (OpenClassrooms, parcours AI Engineer) pour un client fictif, le
+> **Projet pédagogique** (OpenClassrooms, parcours AI Engineer) pour un client fictif, le
 > Centre Hospitalier Saint-Aurélien (CHSA). Le modèle n'est **pas** un dispositif médical et ne
 > doit pas être utilisé pour une décision clinique réelle.
 

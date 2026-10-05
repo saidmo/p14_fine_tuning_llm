@@ -1,0 +1,12 @@
+# Phase 2-3 — entraînement SFT / DPO (pod GPU RunPod)
+# PyTorch n'est PAS listé : il est fourni par l'image runpod/pytorch (2.8.0, CUDA 12.8),
+# déjà compilée pour le GPU. setup_pod.sh empêche pip de le remplacer.
+# Versions exactes figées après le premier run réussi : requirements-train.lock
+transformers
+trl
+peft
+accelerate
+datasets
+huggingface_hub
+mlflow
+pyyaml
