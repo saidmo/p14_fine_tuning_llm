@@ -1,0 +1,72 @@
+# Fine-tuning supervisé (SFT) avec LoRA — POC triage CHSA (python -m src.training.sft)
+seed: 42
+
+model:
+  id: Qwen/Qwen3-1.7B-Base          # révision exacte relevée au lancement et tracée dans MLflow
+  dtype: bfloat16                    # A40 : bf16 natif
+  attn_implementation: sdpa
+
+dataset:
+  repo_id: saidmo2/chsa-triage-medical   # révision exacte relevée au lancement et tracée
+  config: sft
+  train_split: train
+  eval_split: validation
+
+lora:
+  r: 16
+  lora_alpha: 32
+  lora_dropout: 0.05
+  bias: none
+  # Toutes les couches linéaires : attention (q, k, v, o) et MLP (gate, up, down)
+  target_modules: [q_proj, k_proj, v_proj, o_proj, gate_proj, up_proj, down_proj]
+
+# Paramètres transmis tels quels à SFTConfig (TRL)
+training:
+  num_train_epochs: 3               # le meilleur checkpoint (validation) est conservé : la courbe
+                                    # montre où commence le sur-apprentissage
+  learning_rate: 2.0e-4
+  lr_scheduler_type: cosine
+  warmup_steps: 20
+  weight_decay: 0.0
+  per_device_train_batch_size: 8
+  per_device_eval_batch_size: 8
+  gradient_accumulation_steps: 2    # batch effectif 16 -> ~313 pas par époque, ~940 au total
+  max_length: 1024                   # validé en semaine 1 : max 991 tokens avec le chat template
+  bf16: true
+  gradient_checkpointing: true
+  gradient_checkpointing_kwargs: {use_reentrant: false}
+  # La loss ne porte que sur la réponse : jeu converti au format prompt / completion
+  completion_only_loss: true
+  # Fin de réponse du chat template de Qwen (le modèle Base s'arrête sur <|endoftext|>) :
+  # le modèle doit apprendre à produire <|im_end|> pour s'arrêter en production
+  eos_token: "<|im_end|>"
+  packing: false
+  logging_steps: 10
+  eval_strategy: steps
+  eval_steps: 50
+  save_strategy: steps
+  save_steps: 50
+  save_total_limit: 3
+  load_best_model_at_end: true       # garde le meilleur checkpoint (sur-apprentissage)
+  metric_for_best_model: eval_loss
+  greater_is_better: false
+
+# Run de validation de la chaîne complète (--smoke) : remplace les valeurs ci-dessus
+smoke:
+  max_train_samples: 200
+  max_eval_samples: 50
+  training:
+    max_steps: 20
+    logging_steps: 2
+    eval_steps: 10
+    save_steps: 10
+
+mlflow:
+  tracking_uri: sqlite:////workspace/mlflow/mlflow.db   # sur le volume persistant
+  experiment: chsa-sft
+
+output_root: /workspace/outputs/sft
+
+hub:
+  push: true                                     # jamais en mode --smoke
+  repo_id: saidmo2/chsa-qwen3-1.7b-sft-lora      # dépôt de modèle PRIVÉ (adaptateur LoRA)
