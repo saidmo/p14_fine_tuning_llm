@@ -1,0 +1,44 @@
+# Évaluation sur les jeux de test — POC triage CHSA (python -m src.evaluation.evaluate)
+# Même protocole pour chaque modèle : la comparaison se lit dans MLflow (expérience chsa-eval).
+seed: 42
+
+dataset:
+  repo_id: saidmo2/chsa-triage-medical
+  config: sft
+  test_split: test                 # QCM (MediQAl, FrenchMedMCQA) + questions ouvertes MedQuAD
+  clinique_split: eval_clinique    # cas cliniques ouverts : urgences et réanimation
+
+modeles:
+  base:
+    id: Qwen/Qwen3-1.7B-Base
+  sft:
+    id: Qwen/Qwen3-1.7B-Base
+    adaptateur: saidmo2/chsa-qwen3-1.7b-sft-lora   # fusionné au chargement (évalue ce qui est publié)
+
+# Mise en forme du prompt : la même source de vérité que l'entraînement
+config_entrainement: configs/sft.yaml   # chat_template_kwargs et eos_token y sont lus
+
+generation:
+  batch_size: 32
+  max_new_tokens_qcm: 64
+  max_new_tokens_ouvert: 512       # au-delà, la réponse est comptée comme tronquée
+
+latence:
+  exemples: 30                     # cas cliniques traités un par un (batch de 1)
+  max_new_tokens: 256
+
+# Spécialités exclues de l'entraînement SFT (configs/selection.yaml) : sous-groupe à part
+specialites_hors_entrainement: [Histology, Embryology, Cytology, Anatomy]
+
+# Mode --smoke : nombre d'exemples par catégorie
+smoke:
+  qcm: 64
+  medquad: 16
+  clinique: 16
+
+mlflow:
+  tracking_uri: sqlite:////workspace/mlflow/mlflow.db
+  experiment: chsa-eval
+  artifact_location: /workspace/mlflow/artifacts
+
+output_root: /workspace/outputs/eval
