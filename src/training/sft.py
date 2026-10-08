@@ -134,6 +134,11 @@ def main() -> None:
     os.environ["MLFLOW_TRACKING_URI"] = cfg["mlflow"]["tracking_uri"]
     os.environ["MLFLOW_EXPERIMENT_NAME"] = cfg["mlflow"]["experiment"]
     mlflow.set_tracking_uri(cfg["mlflow"]["tracking_uri"])
+    # L'emplacement des artefacts se fixe à la création de l'expérience : sans lui, MLflow écrit
+    # dans ./mlruns, relatif au dossier de lancement (donc dans le dépôt Git)
+    if mlflow.get_experiment_by_name(cfg["mlflow"]["experiment"]) is None:
+        mlflow.create_experiment(cfg["mlflow"]["experiment"],
+                                 artifact_location=cfg["mlflow"].get("artifact_location"))
     mlflow.set_experiment(cfg["mlflow"]["experiment"])
 
     with mlflow.start_run(run_name=run_name):

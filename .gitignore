@@ -18,6 +18,7 @@ data/processed/
 checkpoints/
 outputs/
 mlruns/
+mlflow/
 wandb/
 *.safetensors
 *.bin

@@ -67,6 +67,9 @@ smoke:
 mlflow:
   tracking_uri: sqlite:////workspace/mlflow/mlflow.db   # sur le volume persistant
   experiment: chsa-sft
+  # Emplacement des artefacts, fixé à la CRÉATION de l'expérience (sans réglage, MLflow les
+  # place dans ./mlruns, relatif au dossier de lancement, donc dans le dépôt Git)
+  artifact_location: /workspace/mlflow/artifacts
 
 output_root: /workspace/outputs/sft
 
