@@ -47,18 +47,29 @@ def to_prompt_completion(example: dict[str, Any]) -> dict[str, Any]:
 
 
 def show_example(trainer, tokenizer) -> None:
-    """Affiche un exemple tel que le modèle le voit, et la partie sur laquelle porte la loss."""
+    """Affiche un exemple tel que le modèle le voit, et la partie sur laquelle porte la loss.
+
+    Selon la version de TRL, le masque est un champ completion_mask (1 = dans la loss) ou
+    directement les labels (-100 = exclu de la loss)."""
     example = trainer.train_dataset[0]
     ids = example["input_ids"]
-    mask = example.get("completion_mask")
+    if example.get("completion_mask") is not None:
+        in_loss = [bool(m) for m in example["completion_mask"]]
+    elif example.get("labels") is not None:
+        in_loss = [label != -100 for label in example["labels"]]
+    else:
+        in_loss = None
     print("=" * 80 + "\nEXEMPLE D'ENTRAÎNEMENT (texte complet vu par le modèle)\n" + "=" * 80)
     print(tokenizer.decode(ids))
-    if mask is not None:
-        target = [t for t, m in zip(ids, mask) if m]
-        print("=" * 80 + f"\nPARTIE SUR LAQUELLE PORTE LA LOSS ({len(target)} tokens sur {len(ids)})\n" + "=" * 80)
-        print(tokenizer.decode(target))
+    if in_loss is None:
+        print(f"(aucun masque trouvé : clés = {list(example.keys())})")
     else:
-        print(f"(pas de completion_mask dans l'exemple : clés = {list(example.keys())})")
+        first = in_loss.index(True) if True in in_loss else len(ids)
+        target = [t for t, keep in zip(ids, in_loss) if keep]
+        print("=" * 80 + f"\nPARTIE DONNÉE AU MODÈLE (hors loss) — {first} tokens, fin :\n" + "=" * 80)
+        print(repr(tokenizer.decode(ids[max(0, first - 15):first])))
+        print("=" * 80 + f"\nPARTIE SUR LAQUELLE PORTE LA LOSS — {len(target)} tokens sur {len(ids)} :\n" + "=" * 80)
+        print(repr(tokenizer.decode(target)))
     print("=" * 80)
 
 
