@@ -1,8 +1,9 @@
 """Fine-tuning supervisé (SFT) de Qwen3-1.7B-Base avec LoRA — TRL + PEFT, suivi MLflow.
 
   - Données : configuration « sft » du dataset publié, à une révision exacte relevée au
-    lancement ; chaque exemple est converti au format prompt (system + user) / completion
-    (assistant) : la loss ne porte que sur la réponse.
+    lancement. Le prompt (system + user) est mis en forme par le chat template EXACTEMENT
+    comme à l'inférence (enable_thinking=False : le bloc <think> vide est dans le prompt) ;
+    la completion est la réponse suivie de <|im_end|>. La loss ne porte que sur la réponse.
   - Modèle : révision exacte relevée au lancement ; LoRA sur toutes les couches linéaires.
   - Traçabilité MLflow : commit Git (et modifications non commitées), révisions du dataset et
     du modèle, configuration, versions des bibliothèques, courbes, adaptateur final.
@@ -40,10 +41,18 @@ def git_info() -> dict[str, str]:
             "git_modifications_non_commitees": "inconnu" if status is None else str(bool(status))}
 
 
-def to_prompt_completion(example: dict[str, Any]) -> dict[str, Any]:
-    """[system, user, assistant] -> prompt [system, user] / completion [assistant]."""
-    messages = example["messages"]
-    return {"prompt": messages[:-1], "completion": messages[-1:]}
+def make_formatter(tokenizer, template_kwargs: dict[str, Any], eos_token: str):
+    """[system, user, assistant] -> prompt (texte) / completion (texte).
+
+    Le prompt est produit par le même appel au chat template qu'à l'inférence (vLLM) :
+    il se termine par le bloc <think> vide quand enable_thinking=False. Le modèle n'apprend
+    donc que la réponse, et l'entraînement voit le même texte que la production."""
+    def to_prompt_completion(example: dict[str, Any]) -> dict[str, Any]:
+        messages = example["messages"]
+        prompt = tokenizer.apply_chat_template(messages[:-1], tokenize=False,
+                                               add_generation_prompt=True, **template_kwargs)
+        return {"prompt": prompt, "completion": messages[-1]["content"] + eos_token}
+    return to_prompt_completion
 
 
 def show_example(trainer, tokenizer) -> None:
@@ -106,12 +115,16 @@ def main() -> None:
     if args.smoke:
         train = train.shuffle(seed=cfg["seed"]).select(range(cfg["smoke"]["max_train_samples"]))
         evaluation = evaluation.shuffle(seed=cfg["seed"]).select(range(cfg["smoke"]["max_eval_samples"]))
-    train = train.map(to_prompt_completion, remove_columns=train.column_names)
-    evaluation = evaluation.map(to_prompt_completion, remove_columns=evaluation.column_names)
 
-    # ---- Modèle et tokenizer (révision exacte)
+    # ---- Tokenizer (révision exacte), puis mise en forme des exemples
     model_revision = api.model_info(cfg["model"]["id"]).sha
     tokenizer = AutoTokenizer.from_pretrained(cfg["model"]["id"], revision=model_revision)
+    formatter = make_formatter(tokenizer, cfg["model"].get("chat_template_kwargs") or {},
+                               training_args["eos_token"])
+    train = train.map(formatter, remove_columns=train.column_names)
+    evaluation = evaluation.map(formatter, remove_columns=evaluation.column_names)
+
+    # ---- Modèle
     model = AutoModelForCausalLM.from_pretrained(
         cfg["model"]["id"], revision=model_revision, dtype=getattr(torch, cfg["model"]["dtype"]),
         attn_implementation=cfg["model"]["attn_implementation"])

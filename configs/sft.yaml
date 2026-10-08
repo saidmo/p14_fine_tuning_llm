@@ -5,6 +5,9 @@ model:
   id: Qwen/Qwen3-1.7B-Base          # révision exacte relevée au lancement et tracée dans MLflow
   dtype: bfloat16                    # A40 : bf16 natif
   attn_implementation: sdpa
+  # Mise en forme du prompt identique à l'inférence (vLLM) : mode réflexion désactivé,
+  # le bloc <think> vide fait partie du prompt et non de la réponse apprise
+  chat_template_kwargs: {enable_thinking: false}
 
 dataset:
   repo_id: saidmo2/chsa-triage-medical   # révision exacte relevée au lancement et tracée
@@ -35,7 +38,7 @@ training:
   bf16: true
   gradient_checkpointing: true
   gradient_checkpointing_kwargs: {use_reentrant: false}
-  # La loss ne porte que sur la réponse : jeu converti au format prompt / completion
+  # La loss ne porte que sur la réponse (prompt / completion mis en forme par le script)
   completion_only_loss: true
   # Fin de réponse du chat template de Qwen (le modèle Base s'arrête sur <|endoftext|>) :
   # le modèle doit apprendre à produire <|im_end|> pour s'arrêter en production
