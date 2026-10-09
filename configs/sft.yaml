@@ -47,6 +47,10 @@ training:
   gradient_checkpointing_kwargs: {use_reentrant: false}
   # La loss ne porte que sur la réponse (prompt / completion mis en forme par le script)
   completion_only_loss: true
+  # Entropie croisée classique. Le défaut de TRL 1.14 ("chunked_nll", même calcul par morceaux)
+  # applique directement les poids de lm_head en contournant la couche : il ignorerait les
+  # vecteurs appris des tokens spéciaux (et échoue sur l'enveloppe de PEFT)
+  loss_type: nll
   # Fin de réponse du chat template de Qwen (le modèle Base s'arrête sur <|endoftext|>) :
   # le modèle doit apprendre à produire <|im_end|> pour s'arrêter en production
   eos_token: "<|im_end|>"
