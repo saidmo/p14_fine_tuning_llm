@@ -4,7 +4,11 @@
     lancement. Le prompt (system + user) est mis en forme par le chat template EXACTEMENT
     comme à l'inférence (enable_thinking=False : le bloc <think> vide est dans le prompt) ;
     la completion est la réponse suivie de <|im_end|>. La loss ne porte que sur la réponse.
-  - Modèle : révision exacte relevée au lancement ; LoRA sur toutes les couches linéaires.
+  - Modèle : révision exacte relevée au lancement ; LoRA sur toutes les couches linéaires,
+    plus les vecteurs des tokens du chat template jamais entraînés dans le modèle Base
+    (<|im_start|>, <|im_end|>, <think>, </think> : PEFT trainable_token_indices).
+  - Contrôles : normes de ces vecteurs avant / après, génération de quelques réponses de
+    validation (se terminent-elles par <|im_end|> ?) avant toute publication.
   - Traçabilité MLflow : commit Git (et modifications non commitées), révisions du dataset et
     du modèle, configuration, versions des bibliothèques, courbes, adaptateur final.
   - Sauvegarde : adaptateur sur le volume, puis poussé sur un dépôt PRIVÉ du Hub
@@ -82,6 +86,41 @@ def show_example(trainer, tokenizer) -> None:
     print("=" * 80)
 
 
+def token_norms(model, tokenizer, tokens: list[str]) -> dict[str, float]:
+    """Norme du vecteur (partagé entrée / sortie) de chaque token : 0,375 = jamais entraîné."""
+    import torch
+    # Mesure EN SORTIE de la couche : avec PEFT, les vecteurs appris sont stockés à part et
+    # appliqués au passage ; lire .weight afficherait les valeurs d'origine
+    layer = model.get_input_embeddings()
+    ids = tokenizer.convert_tokens_to_ids(tokens)
+    device = next(model.parameters()).device
+    with torch.no_grad():
+        vectors = layer(torch.tensor(ids, device=device)).float()
+    return {t: round(float(v.norm()), 3) for t, v in zip(tokens, vectors)}
+
+
+def generation_check(model, tokenizer, records: list[dict[str, Any]], template_kwargs: dict[str, Any],
+                     eos_token: str, max_new_tokens: int) -> float:
+    """Génère quelques réponses de validation ; retourne la part terminée par le token de fin."""
+    import torch
+    eos_id = tokenizer.convert_tokens_to_ids(eos_token)
+    model.eval()
+    ended = 0
+    for record in records:
+        prompt = tokenizer.apply_chat_template(record["messages"][:-1], tokenize=False,
+                                               add_generation_prompt=True, **template_kwargs)
+        inputs = tokenizer(prompt, return_tensors="pt", add_special_tokens=False).to(model.device)
+        with torch.inference_mode():
+            output = model.generate(**inputs, max_new_tokens=max_new_tokens, do_sample=False,
+                                    eos_token_id=eos_id, pad_token_id=tokenizer.pad_token_id)
+        generated = output[0, inputs["input_ids"].shape[1]:]
+        finished = bool((generated == eos_id).any())
+        ended += finished
+        print("-" * 80 + f"\n[{record['task']}] terminée par {eos_token} : {finished} "
+              f"({len(generated)} tokens)\n" + tokenizer.decode(generated)[:600])
+    return ended / len(records) if records else float("nan")
+
+
 def main() -> None:
     parser = argparse.ArgumentParser(description=__doc__.splitlines()[0])
     parser.add_argument("--smoke", action="store_true", help="run de validation de la chaîne")
@@ -112,6 +151,10 @@ def main() -> None:
     data_revision = api.dataset_info(cfg["dataset"]["repo_id"]).sha
     dataset = load_dataset(cfg["dataset"]["repo_id"], cfg["dataset"]["config"], revision=data_revision)
     train, evaluation = dataset[cfg["dataset"]["train_split"]], dataset[cfg["dataset"]["eval_split"]]
+    # Exemples bruts pour le contrôle de génération : les premiers de chaque type de tâche
+    per_type = cfg["controle_generation"]["exemples_par_type"]
+    check_records = [r for task in ("mcq_single", "open_qa")
+                     for r in [x for x in evaluation if x["task"] == task][:per_type]]
     if args.smoke:
         train = train.shuffle(seed=cfg["seed"]).select(range(cfg["smoke"]["max_train_samples"]))
         evaluation = evaluation.shuffle(seed=cfg["seed"]).select(range(cfg["smoke"]["max_eval_samples"]))
@@ -128,7 +171,10 @@ def main() -> None:
     model = AutoModelForCausalLM.from_pretrained(
         cfg["model"]["id"], revision=model_revision, dtype=getattr(torch, cfg["model"]["dtype"]),
         attn_implementation=cfg["model"]["attn_implementation"])
-    peft_config = LoraConfig(task_type="CAUSAL_LM", **cfg["lora"])
+    trainable_ids = tokenizer.convert_tokens_to_ids(cfg["trainable_tokens"])
+    peft_config = LoraConfig(task_type="CAUSAL_LM", trainable_token_indices=trainable_ids, **cfg["lora"])
+    norms_before = token_norms(model, tokenizer, cfg["trainable_tokens"])
+    print(f"Normes avant entraînement : {norms_before}")
 
     # ---- MLflow (le callback de Transformers journalise dans le run ouvert ici)
     os.environ["MLFLOW_TRACKING_URI"] = cfg["mlflow"]["tracking_uri"]
@@ -164,6 +210,15 @@ def main() -> None:
 
         trainer.train()
         final = trainer.evaluate()
+
+        norms_after = token_norms(trainer.model, tokenizer, cfg["trainable_tokens"])
+        print(f"Normes avant : {norms_before}\nNormes après : {norms_after}")
+        mlflow.log_dict({"avant": norms_before, "apres": norms_after}, "controles/normes_tokens.json")
+        template_kwargs = cfg["model"].get("chat_template_kwargs") or {}
+        ended = generation_check(trainer.model, tokenizer, check_records, template_kwargs,
+                                 training_args["eos_token"], cfg["controle_generation"]["max_new_tokens"])
+        mlflow.log_metric("controle_reponses_terminees", ended)
+        print(f"Contrôle : {ended:.0%} des réponses se terminent par {training_args['eos_token']}")
         mlflow.log_metrics({f"final_{k}": v for k, v in final.items() if isinstance(v, (int, float))})
         print(f"Évaluation finale : {final}")
 
