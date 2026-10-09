@@ -88,7 +88,7 @@ def build_prompts(tokenizer, records: list[dict[str, Any]], template_kwargs: dic
 
 
 def generate(model, tokenizer, prompts: list[str], max_new_tokens: int, batch_size: int,
-             eos_ids: list[int]) -> list[tuple[str, int]]:
+             eos_ids: list[int], verbose: bool = True) -> list[tuple[str, int]]:
     """Génération déterministe par lots (triés par longueur). Retourne (texte, nb de tokens générés)."""
     import torch
     order = sorted(range(len(prompts)), key=lambda i: len(prompts[i]), reverse=True)
@@ -106,7 +106,8 @@ def generate(model, tokenizer, prompts: list[str], max_new_tokens: int, batch_si
             n_tokens = int((~torch.isin(generated, torch.tensor(eos_ids + [tokenizer.pad_token_id],
                                                                  device=generated.device))).sum())
             results[i] = (tokenizer.decode(generated, skip_special_tokens=True).strip(), n_tokens)
-        print(f"    {min(start + batch_size, len(order))} / {len(order)}")
+        if verbose:
+            print(f"    {min(start + batch_size, len(order))} / {len(order)}")
     return results  # type: ignore[return-value]
 
 
@@ -168,9 +169,12 @@ def main() -> None:
     qcm = [r for r in test if r["task"].startswith("mcq")]
     medquad = [r for r in test if r["task"] == "open_qa"]
     clinique = list(dataset[cfg["dataset"]["clinique_split"]])
-    if args.smoke:
-        qcm, medquad, clinique = (qcm[:cfg["smoke"]["qcm"]], medquad[:cfg["smoke"]["medquad"]],
-                                  clinique[:cfg["smoke"]["clinique"]])
+    if args.smoke:      # échantillon aléatoire à seed fixe : toutes les catégories représentées
+        import random
+        rng = random.Random(cfg["seed"])
+        qcm = rng.sample(qcm, min(cfg["smoke"]["qcm"], len(qcm)))
+        medquad = rng.sample(medquad, min(cfg["smoke"]["medquad"], len(medquad)))
+        clinique = rng.sample(clinique, min(cfg["smoke"]["clinique"], len(clinique)))
     print(f"QCM : {len(qcm)} — MedQuAD : {len(medquad)} — cas cliniques : {len(clinique)}")
 
     # ---- Modèle (révisions exactes), adaptateur fusionné si présent
@@ -226,11 +230,12 @@ def main() -> None:
     lat_cfg = cfg["latence"]
     sample = build_prompts(tokenizer, clinique[:lat_cfg["exemples"]], template_kwargs)
     durations, speeds = [], []
-    generate(model, tokenizer, sample[:1], 16, 1, eos_ids)          # échauffement du GPU
+    generate(model, tokenizer, sample[:1], 16, 1, eos_ids, verbose=False)   # échauffement du GPU
     for prompt in sample:
         torch.cuda.synchronize()
         start = time.perf_counter()
-        (_, n_tokens), = generate(model, tokenizer, [prompt], lat_cfg["max_new_tokens"], 1, eos_ids)
+        (_, n_tokens), = generate(model, tokenizer, [prompt], lat_cfg["max_new_tokens"], 1, eos_ids,
+                                  verbose=False)
         torch.cuda.synchronize()
         elapsed = time.perf_counter() - start
         durations.append(elapsed)
