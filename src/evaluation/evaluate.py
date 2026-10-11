@@ -2,20 +2,23 @@
 
 Mesures :
   - QCM (test MediQAl et FrenchMedMCQA) : exactitude (lettres exactement justes), score
-    partiel pour les réponses multiples, taux de format (lettres extraites), sous-groupes
-    (source, type, cas clinique, spécialités exclues de l'entraînement) ;
+    partiel pour les réponses multiples (et sa référence naïve « cocher les cinq options »),
+    taux de format (lettres extraites), sous-groupes (source, type, cas clinique, spécialités
+    exclues de l'entraînement) ;
   - questions ouvertes (eval_clinique, MedQuAD) : ROUGE-L avec la référence, longueur, taux
     de réponses tronquées ; toutes les réponses sont sauvegardées pour relecture humaine ;
   - latence : cas cliniques traités un par un (référence avant optimisation par vLLM).
 
 Protocole : prompt mis en forme comme à l'entraînement (configs/sft.yaml), génération
-déterministe (greedy), arrêt sur <|im_end|>, modèle SFT chargé depuis le Hub à la révision
-exacte de l'adaptateur puis fusionné. Tout est tracé dans MLflow (expérience chsa-eval).
+déterministe (greedy), arrêt sur <|im_end|>, pénalité de répétition sur les questions ouvertes
+et la latence (configs/eval.yaml, valeur fixée a priori), modèle SFT chargé depuis le Hub à la
+révision exacte de l'adaptateur puis fusionné. Tout est tracé dans MLflow (expérience chsa-eval).
 
 Usage (sur le pod, environnement activé, depuis la racine du dépôt) :
     python -m src.evaluation.evaluate --modele sft --smoke
     python -m src.evaluation.evaluate --modele base
     python -m src.evaluation.evaluate --modele sft
+    python -m src.evaluation.evaluate --modele sft --repetition-penalty 1.0   # ablation greedy pur
 """
 from __future__ import annotations
 
@@ -39,6 +42,7 @@ _LETTER = r"[A-E](?![A-Za-zà-ÿœæŒÆ])"     # une lettre seule : pas le « E
 _ANSWER = re.compile(rf"[Rr][ée]ponses?\s*:\s*({_LETTER}(?:\s*(?:,|;|et)\s*{_LETTER})*)")
 _LEADING_LETTER = re.compile(r"^\s*([A-E])\s*[.)]")
 _WORD = re.compile(r"\w+", re.UNICODE)
+_ALL_OPTIONS = list("ABCDE")               # MediQAl et FrenchMedMCQA : cinq options
 
 
 def parse_letters(text: str) -> list[str]:
@@ -88,8 +92,12 @@ def build_prompts(tokenizer, records: list[dict[str, Any]], template_kwargs: dic
 
 
 def generate(model, tokenizer, prompts: list[str], max_new_tokens: int, batch_size: int,
-             eos_ids: list[int], verbose: bool = True) -> list[tuple[str, int]]:
-    """Génération déterministe par lots (triés par longueur). Retourne (texte, nb de tokens générés)."""
+             eos_ids: list[int], repetition_penalty: float = 1.0,
+             verbose: bool = True) -> list[tuple[str, int]]:
+    """Génération déterministe par lots (triés par longueur). Retourne (texte, nb de tokens générés).
+
+    repetition_penalty : 1.0 = désactivée. C'est un « logits processor » (pas un réglage
+    d'échantillonnage) : il s'applique aussi en greedy, sur le prompt et la réponse, comme vLLM."""
     import torch
     order = sorted(range(len(prompts)), key=lambda i: len(prompts[i]), reverse=True)
     results: list[tuple[str, int] | None] = [None] * len(prompts)
@@ -99,6 +107,7 @@ def generate(model, tokenizer, prompts: list[str], max_new_tokens: int, batch_si
                             add_special_tokens=False).to(model.device)
         with torch.inference_mode():
             output = model.generate(**encoded, max_new_tokens=max_new_tokens, do_sample=False,
+                                    repetition_penalty=repetition_penalty,
                                     eos_token_id=eos_ids, pad_token_id=tokenizer.pad_token_id)
         width = encoded["input_ids"].shape[1]
         for row, i in enumerate(batch):
@@ -125,8 +134,12 @@ def summarize_qcm(rows: list[dict[str, Any]], excluded_subjects: set[str]) -> di
     for name, items in groups.items():
         metrics[f"{name}_exactitude"] = mean([float(r["exact"]) for r in items])
         metrics[f"{name}_n"] = len(items)
+    multi = [r for r in rows if r["task"] == "mcq_multi"]
     metrics["qcm_taux_format"] = mean([float(bool(r["predites"])) for r in rows])
-    metrics["qcm_mcq_multi_score_partiel"] = mean([r["partiel"] for r in rows if r["task"] == "mcq_multi"])
+    metrics["qcm_mcq_multi_score_partiel"] = mean([r["partiel"] for r in multi])
+    # Référence naïve, indépendante du modèle : cocher toujours les cinq options (A à E)
+    metrics["qcm_mcq_multi_score_partiel_ref_toutes_lettres"] = mean(
+        [partial_score(_ALL_OPTIONS, r["attendues"]) for r in multi])
     return metrics
 
 
@@ -142,12 +155,17 @@ def main() -> None:
     parser.add_argument("--modele", required=True, help="clé de la section « modeles » de la configuration")
     parser.add_argument("--smoke", action="store_true", help="quelques exemples par catégorie")
     parser.add_argument("--config", default=str(CONFIG_PATH))
+    parser.add_argument("--repetition-penalty", type=float, default=None,
+                        help="remplace generation.repetition_penalty_ouvert (ablation greedy pur : 1.0)")
     args = parser.parse_args()
 
     cfg = yaml.safe_load(Path(args.config).read_text(encoding="utf-8"))
     train_cfg = yaml.safe_load((ROOT / cfg["config_entrainement"]).read_text(encoding="utf-8"))
     template_kwargs = train_cfg["model"].get("chat_template_kwargs") or {}
     model_cfg = cfg["modeles"][args.modele]
+    gen = cfg["generation"]
+    rep_penalty = (args.repetition_penalty if args.repetition_penalty is not None
+                   else gen["repetition_penalty_ouvert"])
     stamp = datetime.now(timezone.utc).strftime("%Y%m%d-%H%M%S")
     run_name = f"eval-{args.modele}-{stamp}" + ("-smoke" if args.smoke else "")
     output_dir = Path(cfg["output_root"]) / run_name
@@ -176,6 +194,7 @@ def main() -> None:
         medquad = rng.sample(medquad, min(cfg["smoke"]["medquad"], len(medquad)))
         clinique = rng.sample(clinique, min(cfg["smoke"]["clinique"], len(clinique)))
     print(f"QCM : {len(qcm)} — MedQuAD : {len(medquad)} — cas cliniques : {len(clinique)}")
+    print(f"Pénalité de répétition (questions ouvertes, latence) : {rep_penalty}")
 
     # ---- Modèle (révisions exactes), adaptateur fusionné si présent
     model_revision = api.model_info(model_cfg["id"]).sha
@@ -192,11 +211,10 @@ def main() -> None:
     model.eval()
     eos_ids = sorted({tokenizer.convert_tokens_to_ids(train_cfg["training"]["eos_token"]), tokenizer.eos_token_id})
 
-    gen = cfg["generation"]
     metrics: dict[str, float] = {}
     predictions: list[dict[str, Any]] = []
 
-    # ---- QCM
+    # ---- QCM (sans pénalité de répétition : réponses courtes, pas de boucle)
     print("[QCM] génération…")
     outputs = generate(model, tokenizer, build_prompts(tokenizer, qcm, template_kwargs),
                        gen["max_new_tokens_qcm"], gen["batch_size"], eos_ids)
@@ -212,13 +230,14 @@ def main() -> None:
     metrics.update(summarize_qcm(qcm_rows, set(cfg["specialites_hors_entrainement"])))
     predictions += [{"categorie": "qcm", **r} for r in qcm_rows]
 
-    # ---- Questions ouvertes
+    # ---- Questions ouvertes (avec pénalité de répétition)
     for name, records in (("clinique", clinique), ("medquad", medquad)):
         if not records:
             continue
         print(f"[{name}] génération…")
         outputs = generate(model, tokenizer, build_prompts(tokenizer, records, template_kwargs),
-                           gen["max_new_tokens_ouvert"], gen["batch_size"], eos_ids)
+                           gen["max_new_tokens_ouvert"], gen["batch_size"], eos_ids,
+                           repetition_penalty=rep_penalty)
         rows = [{"id": r["id"], "source": r["source"], "medical_subject": r.get("medical_subject"),
                  "rouge_l": rouge_l(text, r["messages"][-1]["content"]), "n_tokens": n_tokens,
                  "prediction": text, "reference": r["messages"][-1]["content"]}
@@ -226,16 +245,17 @@ def main() -> None:
         metrics.update(summarize_open(rows, name, gen["max_new_tokens_ouvert"]))
         predictions += [{"categorie": name, **r} for r in rows]
 
-    # ---- Latence (un cas à la fois, comme un utilisateur)
+    # ---- Latence (un cas à la fois, comme un utilisateur ; même réglage qu'en production)
     lat_cfg = cfg["latence"]
     sample = build_prompts(tokenizer, clinique[:lat_cfg["exemples"]], template_kwargs)
     durations, speeds = [], []
-    generate(model, tokenizer, sample[:1], 16, 1, eos_ids, verbose=False)   # échauffement du GPU
+    generate(model, tokenizer, sample[:1], 16, 1, eos_ids, repetition_penalty=rep_penalty,
+             verbose=False)   # échauffement du GPU
     for prompt in sample:
         torch.cuda.synchronize()
         start = time.perf_counter()
         (_, n_tokens), = generate(model, tokenizer, [prompt], lat_cfg["max_new_tokens"], 1, eos_ids,
-                                  verbose=False)
+                                  repetition_penalty=rep_penalty, verbose=False)
         torch.cuda.synchronize()
         elapsed = time.perf_counter() - start
         durations.append(elapsed)
@@ -265,15 +285,18 @@ def main() -> None:
                          "gpu": torch.cuda.get_device_name(0)})
         mlflow.log_params({"batch_size": gen["batch_size"], "max_new_tokens_qcm": gen["max_new_tokens_qcm"],
                            "max_new_tokens_ouvert": gen["max_new_tokens_ouvert"], "decodage": "greedy",
+                           "repetition_penalty_ouvert": rep_penalty,
                            **{f"template_{k}": v for k, v in template_kwargs.items()}})
         mlflow.log_metrics({k: v for k, v in metrics.items() if v == v})       # sans les NaN
         mlflow.log_artifact(str(predictions_path), artifact_path="predictions")
         mlflow.log_artifact(args.config, artifact_path="configuration")
 
-    print("=" * 80 + f"\n{run_name}\n" + "=" * 80)
+    print("=" * 80 + f"\n{run_name}  (repetition_penalty_ouvert = {rep_penalty})\n" + "=" * 80)
     for key in sorted(metrics):
-        if not key.endswith("_n"):
-            print(f"  {key:<45} {metrics[key]}")
+        if key.endswith("_n"):
+            continue
+        n = metrics.get(key.rsplit("_", 1)[0] + "_n")
+        print(f"  {key:<50} {metrics[key]}" + (f"   (n={n})" if n is not None else ""))
     print(f"Prédictions : {predictions_path}")
 
 

@@ -22,6 +22,11 @@ generation:
   batch_size: 32
   max_new_tokens_qcm: 64
   max_new_tokens_ouvert: 512       # au-delà, la réponse est comptée comme tronquée
+  # Anti-répétition pour les questions ouvertes et la latence (pas les QCM : 64 tokens, pas de
+  # boucle). Même définition dans vLLM : pénalité multiplicative sur les tokens déjà présents,
+  # prompt compris. Valeur FIXÉE A PRIORI, non réglée sur le test. 1.0 = désactivée
+  # (ablation greedy pur : option --repetition-penalty 1.0 en ligne de commande).
+  repetition_penalty_ouvert: 1.1
 
 latence:
   exemples: 30                     # cas cliniques traités un par un (batch de 1)
