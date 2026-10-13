@@ -1,0 +1,96 @@
+# Alignement par préférences (DPO) avec LoRA — POC triage CHSA (python -m src.training.dpo)
+seed: 42
+
+# Point de départ ET modèle de référence : le modèle SFT fusionné (base + adaptateur SFT
+# a7c6bf2d…, publié par src/training/fusionner.py, contrôles dans son provenance.json).
+# Révision ÉPINGLÉE : l'adaptateur DPO n'a de sens que sur ces poids exacts.
+model:
+  id: saidmo2/chsa-qwen3-1.7b-sft
+  revision: 923746e75cca6091cbadae42a7a052addc4bb2db
+  dtype: bfloat16
+  attn_implementation: sdpa
+
+# Mise en forme du prompt : même source de vérité que le SFT et l'évaluation
+# (chat_template_kwargs = enable_thinking false ; eos_token = <|im_end|>)
+config_sft: configs/sft.yaml
+config_eval: configs/eval.yaml       # paramètres de génération du contrôle (QCM 64 tokens, pénalité 1.1)
+
+dataset:
+  repo_id: saidmo2/chsa-triage-medical
+  revision: ba1522abfacbe127a54fae2b7cdb35d0de14fa89   # même révision que le SFT
+  config: dpo
+  train_split: train          # 3 000 paires : ChatDoctor, MedQA, MedQA-Evol (hard / easy)
+  eval_split: validation      # 300 paires : sélection du checkpoint
+  test_split: test            # 777 paires : mesuré UNE fois, après la sélection
+
+# LoRA identique au SFT : une seule chose change entre les deux étapes (la méthode).
+# Pas de tokens entraînables : leurs vecteurs sont déjà appris et fusionnés dans le modèle de
+# départ, et sans adaptateur sur lm_head le contournement de type chunked_nll est impossible.
+lora:
+  r: 16
+  lora_alpha: 32
+  lora_dropout: 0.05          # neutralisé par disable_dropout (voir training)
+  bias: none
+  target_modules: [q_proj, k_proj, v_proj, o_proj, gate_proj, up_proj, down_proj]
+
+# Paramètres transmis tels quels à DPOConfig (TRL 1.14). Avec PEFT et sans ref_model, la
+# référence est le modèle de départ, adaptateur désactivé : pas de second modèle en mémoire.
+training:
+  loss_type: [sigmoid]        # DPO standard (Rafailov et al., 2023)
+  beta: 0.1                   # valeur de l'article et de TRL ; plus petit = plus loin de la référence
+  num_train_epochs: 1         # le DPO sur-apprend vite : 3 000 / 16 = 188 pas
+  learning_rate: 5.0e-6       # TRL : 1e-6 par défaut (fine-tuning complet) ; LoRA : ordre de 5e-6
+  lr_scheduler_type: cosine
+  warmup_steps: 19            # ≈ 10 % des 188 pas
+  weight_decay: 0.0
+  per_device_train_batch_size: 4
+  per_device_eval_batch_size: 4
+  gradient_accumulation_steps: 4   # batch effectif 16 paires, comme le SFT
+  # Longueur maximale prompt + réponse ; TRL 1.14 n'a plus de max_prompt_length. Le script
+  # vérifie lui-même qu'aucune paire d'entraînement ne dépasse (fermé par défaut)
+  max_length: 1536
+  disable_dropout: true       # sinon les log-probabilités du modèle entraîné sont bruitées face à la référence
+  precompute_ref_log_probs: false
+  bf16: true
+  gradient_checkpointing: true
+  gradient_checkpointing_kwargs: {use_reentrant: false}
+  logging_steps: 5
+  eval_strategy: steps
+  eval_steps: 25
+  save_strategy: steps
+  save_steps: 25
+  save_total_limit: 3
+  load_best_model_at_end: true
+  metric_for_best_model: eval_loss   # loss DPO sur la validation
+  greater_is_better: false
+
+# Run de validation de la chaîne complète (--smoke) : remplace les valeurs ci-dessus
+smoke:
+  max_train_samples: 64
+  max_eval_samples: 32
+  max_test_samples: 32
+  training:
+    max_steps: 12
+    warmup_steps: 2
+    logging_steps: 2
+    eval_steps: 6
+    save_steps: 6
+
+mlflow:
+  tracking_uri: sqlite:////workspace/mlflow/mlflow.db
+  experiment: chsa-dpo
+  artifact_location: /workspace/mlflow/artifacts
+
+output_root: /workspace/outputs/dpo
+
+hub:
+  push: true                                         # jamais en mode --smoke
+  repo_id: saidmo2/chsa-qwen3-1.7b-sft-dpo-lora      # dépôt PRIVÉ (adaptateur sur le modèle SFT fusionné)
+
+# Contrôle de génération AVANT et APRÈS l'entraînement, sur les mêmes exemples : dérive de
+# format (les réponses MedQA « chosen » sont des raisonnements en anglais) et de longueur
+controle_generation:
+  exemples_par_type: 2        # QCU, QCM multiples, questions ouvertes (validation SFT)
+  origines_dpo: [ChatDoctor, MedQA]   # un prompt de la validation DPO par origine
+  max_new_tokens_ouvert: 256
+  batch_size: 8
