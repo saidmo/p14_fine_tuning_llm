@@ -298,10 +298,23 @@ def main() -> None:
         test_results = preference_rewards(trainer.model, tokenizer, test_rows, beta)
         metrics = {**summarize_rewards(val_results, "validation", train_origins),
                    **summarize_rewards(test_results, "test", train_origins)}
+        # Comparaison avec TRL sur la validation. Les MOYENNES (log-probabilités, marge) vérifient
+        # la définition du calcul ; la précision, elle, est sensible au bruit numérique bf16
+        # (lots avec padding chez TRL, séquences seules ici) quand les marges sont proches de 0
+        comparaison = {"logps_chosen": (mean([r["logps_chosen"] for r in val_results]),
+                                        final.get("eval_logps/chosen")),
+                       "logps_rejected": (mean([r["logps_rejected"] for r in val_results]),
+                                          final.get("eval_logps/rejected")),
+                       "marge": (metrics["validation_marge_tout"], final.get("eval_rewards/margins")),
+                       "precision": (metrics["validation_precision_tout"], final.get("eval_rewards/accuracies"))}
+        metrics.update({f"validation_{k}_moyenne": v[0] for k, v in comparaison.items()
+                        if k.startswith("logps")})
         mlflow.log_metrics(metrics)
-        trl_accuracy = next((v for k, v in final.items() if "accurac" in k), None)
-        print(f"Précision des récompenses (validation) : calcul indépendant "
-              f"{metrics['validation_precision_tout']} — TRL {trl_accuracy}")
+        mlflow.log_dict({k: {"independant": v[0], "trl": v[1]} for k, v in comparaison.items()},
+                        "controles/comparaison_trl_validation.json")
+        print("Validation — calcul indépendant / TRL :")
+        for k, (ours, theirs) in comparaison.items():
+            print(f"  {k:<16} {ours:>10.4f}   {theirs}")
         for key in sorted(k for k in metrics if k.startswith("test_") and not k.endswith("_n")):
             print(f"  {key:<45} {metrics[key]}   (n={metrics.get(key.replace('_marge_', '_precision_') + '_n')})")
         results_path = output_dir / "recompenses.jsonl"
