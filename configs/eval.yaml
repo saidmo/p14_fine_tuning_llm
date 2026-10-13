@@ -14,6 +14,9 @@ modeles:
   sft:
     id: Qwen/Qwen3-1.7B-Base
     adaptateur: saidmo2/chsa-qwen3-1.7b-sft-lora   # fusionné au chargement (évalue ce qui est publié)
+  dpo:
+    id: saidmo2/chsa-qwen3-1.7b-sft                # modèle SFT fusionné (src/training/fusionner.py)
+    adaptateur: saidmo2/chsa-qwen3-1.7b-sft-dpo-lora
 
 # Mise en forme du prompt : la même source de vérité que l'entraînement
 config_entrainement: configs/sft.yaml   # chat_template_kwargs et eos_token y sont lus

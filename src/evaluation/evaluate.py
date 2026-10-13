@@ -19,6 +19,7 @@ Usage (sur le pod, environnement activé, depuis la racine du dépôt) :
     python -m src.evaluation.evaluate --modele base
     python -m src.evaluation.evaluate --modele sft
     python -m src.evaluation.evaluate --modele sft --repetition-penalty 1.0   # ablation greedy pur
+    python -m src.evaluation.evaluate --modele dpo
 """
 from __future__ import annotations
 
@@ -209,7 +210,10 @@ def main() -> None:
         model = PeftModel.from_pretrained(model, model_cfg["adaptateur"], revision=adapter_revision)
         model = model.merge_and_unload()
     model.eval()
-    eos_ids = sorted({tokenizer.convert_tokens_to_ids(train_cfg["training"]["eos_token"]), tokenizer.eos_token_id})
+    # Arrêt sur <|im_end|> ET <|endoftext|> pour tous les modèles : le tokenizer du modèle Base a
+    # <|endoftext|> pour EOS, celui du modèle SFT fusionné <|im_end|> ; même protocole pour tous
+    eos_ids = sorted({tokenizer.convert_tokens_to_ids(train_cfg["training"]["eos_token"]),
+                      tokenizer.convert_tokens_to_ids("<|endoftext|>"), tokenizer.eos_token_id})
 
     metrics: dict[str, float] = {}
     predictions: list[dict[str, Any]] = []
