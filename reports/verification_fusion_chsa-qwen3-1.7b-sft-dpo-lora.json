@@ -1,0 +1,19 @@
+{
+  "base": "saidmo2/chsa-qwen3-1.7b-sft",
+  "base_revision": "923746e75cca6091cbadae42a7a052addc4bb2db",
+  "adaptateur": "saidmo2/chsa-qwen3-1.7b-sft-dpo-lora",
+  "adaptateur_revision": "8818097df7fab610d9b8109bcdc435192b893199",
+  "poids": {
+    "norme_relative_mise_a_jour": 0.00023718728417549065,
+    "erreur_relative_fusion": 0.9243581219851733,
+    "part_coefficients_effaces": 0.9432878529741651
+  },
+  "preferences_validation": {
+    "n": 300,
+    "precision_separe": 0.78,
+    "precision_fusionne": 0.7833,
+    "marge_separe": 0.5987,
+    "marge_fusionne": 0.5392,
+    "accord_du_signe": 0.9433
+  }
+}

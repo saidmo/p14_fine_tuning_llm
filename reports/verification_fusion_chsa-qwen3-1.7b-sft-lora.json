@@ -1,0 +1,11 @@
+{
+  "base": "Qwen/Qwen3-1.7B-Base",
+  "base_revision": "ea980cb0a6c2ae4b936e82123acc929f1cec04c1",
+  "adaptateur": "saidmo2/chsa-qwen3-1.7b-sft-lora",
+  "adaptateur_revision": "a7c6bf2d639ae2ba1c39ae18c266c4107e897462",
+  "poids": {
+    "norme_relative_mise_a_jour": 0.012992355024719963,
+    "erreur_relative_fusion": 0.12690175725400468,
+    "part_coefficients_effaces": 0.16729998872393653
+  }
+}
