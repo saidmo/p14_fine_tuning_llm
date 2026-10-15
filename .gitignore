@@ -10,10 +10,11 @@ configs/prive/
 *.token
 
 # Données : versionnées sur le Hugging Face Hub, pas dans Git
+data/relecture/
 data/raw/
 data/interim/
 data/processed/
-data/relecture/
+
 
 # Artefacts d'entraînement
 checkpoints/
