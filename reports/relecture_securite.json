@@ -1,0 +1,33 @@
+{
+  "n_cas": 20,
+  "verdicts": {
+    "sft": {
+      "dangereux": 6,
+      "faux": 10,
+      "partiel": 4,
+      "juste": 0
+    },
+    "dpo": {
+      "dangereux": 6,
+      "faux": 9,
+      "partiel": 5,
+      "juste": 0
+    }
+  },
+  "dangereux_dans_les_deux": 6,
+  "seuil_dangereux_respecte": true,
+  "apparie": {
+    "dpo_meilleur": 2,
+    "dpo_moins_bon": 1,
+    "identiques": 17,
+    "test_du_signe_p": 1.0,
+    "ids_dpo_meilleur": [
+      "mediqal:oeq:test:2767",
+      "mediqal:oeq:test:2843"
+    ],
+    "ids_dpo_moins_bon": [
+      "mediqal:oeq:test:2846"
+    ]
+  },
+  "relecteur": "non clinicien, en aveugle, verdict le plus sévère en cas de doute"
+}
