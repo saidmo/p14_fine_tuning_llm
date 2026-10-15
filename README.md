@@ -8,7 +8,9 @@ démonstration servi par **vLLM** derrière une API **FastAPI**, avec un pipelin
 > Centre Hospitalier Saint-Aurélien (CHSA). Le modèle n'est **pas** un dispositif médical et ne
 > doit pas être utilisé pour une décision clinique réelle. À ce stade, le corpus ne contient
 > aucun exemple annoté avec un niveau de priorité : **le triage n'est ni appris ni évalué**, seuls
-> les connaissances médicales et le comportement de réponse le sont.
+> les connaissances médicales et le comportement de réponse le sont. La relecture de sécurité
+> confirme cette limite : sur 20 cas cliniques d'urgence, **aucune réponse juste** et 30 à 40 %
+> de réponses jugées dangereuses, pour le modèle SFT comme pour le modèle DPO.
 
 ## Avancement
 
@@ -16,7 +18,7 @@ démonstration servi par **vLLM** derrière une API **FastAPI**, avec un pipelin
 |---|---|---|
 | 1 | Préparation et structuration des données | ✅ dataset publié |
 | 2 | Fine-tuning supervisé (SFT) avec LoRA | ✅ adaptateur publié, évalué, model card |
-| 3 | Alignement par préférences (DPO) | en cours |
+| 3 | Alignement par préférences (DPO) | ✅ adaptateur publié, évalué ; **non retenu par défaut** (voir « Modèle retenu ») |
 | 4 | Déploiement vLLM / FastAPI, CI/CD, rapport | à venir |
 
 ## Dataset (livrable 1)
@@ -47,38 +49,79 @@ La model card est versionnée dans [`reports/model_card_sft.md`](reports/model_c
 - **Traçabilité** : révisions du dataset et du modèle, commit Git, configuration et environnement
   enregistrés dans MLflow ; identité bit à bit vérifiée entre le meilleur checkpoint et
   l'adaptateur publié, et conservation des vecteurs appris après fusion.
+- **Modèle SFT fusionné** (base + adaptateur, contrôles bloquants, `provenance.json`) :
+  [`saidmo2/chsa-qwen3-1.7b-sft`](https://huggingface.co/saidmo2/chsa-qwen3-1.7b-sft), révision
+  `923746e7`. C'est le point de départ et la référence du DPO, et le **modèle retenu**.
 
-### Résultats sur le jeu de test (base vs SFT)
+## Adaptateur DPO (semaine 3)
+
+Publié sur le Hugging Face Hub (dépôt privé) : [`saidmo2/chsa-qwen3-1.7b-sft-dpo-lora`](https://huggingface.co/saidmo2/chsa-qwen3-1.7b-sft-dpo-lora),
+révision `8818097d`, appliqué au modèle SFT fusionné.
+
+- **DPO standard** (loss sigmoid, β 0,1), lr 5e-6, 1 époque (188 pas), batch effectif 16 ; LoRA
+  identique au SFT ; **référence** = modèle SFT fusionné, adaptateur désactivé ; **tokens du chat
+  template gelés** (déjà appris par le SFT).
+- **Meilleur checkpoint** sur la loss DPO de validation : pas 175 (0,494) ; les log-probabilités des
+  réponses préférées augmentent plus vite que celles des réponses rejetées.
+- **Précision des récompenses implicites sur le test DPO : 75,4 %** (n = 777), dont 73,4 % sur
+  8 sources jamais vues et 73,6 % sur les préférences annotées par des humains. Calcul indépendant
+  de TRL, vérifié contre TRL sur la validation.
+- **Non fusionné** : la mise à jour DPO est si petite que la fusion en bf16 efface 94 % de ses
+  coefficients (17 % pour le SFT) ; l'adaptateur reste séparé et sera servi tel quel par vLLM.
+  Diagnostic : [`reports/verification_fusion_*.json`](reports).
+
+## Modèle retenu
+
+Seuils d'acceptation du DPO **fixés avant son évaluation**, appliqués au modèle tel qu'il sera servi :
+
+| Seuil | SFT | DPO | Résultat |
+|---|---|---|---|
+| Format QCM ≥ 99 % | 100 % | 100 % | ✅ |
+| FrenchMedMCQA, baisse ≤ 3 points | 57,9 % | 56,1 % | ✅ |
+| Réponses tronquées ≤ SFT (cas cliniques) | 17,1 % | 20,2 % | ❌ (McNemar p = 0,32, non significatif) |
+| Réponses tronquées ≤ SFT (MedQuAD) | 6,7 % | 6,3 % | ✅ |
+| Précision des récompenses (test DPO) > 0,5 | — | 75,4 % | ✅ |
+| Réponses « dangereuses » ≤ SFT (relecture, 20 cas) | 6 | 8 | ❌ (test du signe p = 0,73, non significatif) |
+
+Le DPO apprend les préférences visées, sans dégrader les QCM ni le français, mais il n'a pas
+démontré qu'il était au moins aussi sûr que le SFT. **Décision : le SFT est servi par défaut ;
+le DPO est déployé comme second modèle**, accessible explicitement, à des fins de démonstration.
+
+Détails : [`reports/comparaison_sft_dpo_separe.json`](reports/comparaison_sft_dpo_separe.json),
+[`reports/relecture_securite_dpo_separe.json`](reports/relecture_securite_dpo_separe.json).
+
+### Résultats sur le jeu de test (base, SFT, DPO servi)
 
 Chaque score est comparé à une **référence naïve**, une stratégie sans aucune connaissance
 médicale.
 
-| Indicateur | Base | SFT | Référence naïve |
-|---|---|---|---|
-| Format QCM respecté | 29,6 % | **100 %** | — |
-| QCU, exactitude | 1,6 % | 21,7 % | 23,7 % (lettre la plus fréquente) |
-| QCM multiples, score partiel | 0,15 | 0,50 | 0,54 (tout cocher) |
-| FrenchMedMCQA, exactitude | 0,9 % | **57,9 %** | 26,5 % (lettre la plus fréquente) |
-| MedQuAD, ROUGE-L | 0,075 | **0,302** | — |
-| Cas cliniques urgences / réanimation, ROUGE-L | 0,072 | 0,075 | — |
-| Réponses tronquées (cas cliniques) | 55,5 % | 17,1 % | — |
+| Indicateur | Base | SFT | DPO | Référence naïve |
+|---|---|---|---|---|
+| Format QCM respecté | 29,6 % | **100 %** | **100 %** | — |
+| QCU, exactitude | 1,6 % | 21,7 % | 21,3 % | 23,7 % (lettre la plus fréquente) |
+| QCM multiples, score partiel | 0,15 | 0,50 | 0,50 | 0,54 (tout cocher) |
+| FrenchMedMCQA, exactitude | 0,9 % | **57,9 %** | 56,1 % | 26,5 % (lettre la plus fréquente) |
+| MedQuAD, ROUGE-L | 0,075 | **0,302** | 0,302 | — |
+| Cas cliniques urgences / réanimation, ROUGE-L | 0,072 | 0,075 | 0,073 | — |
+| Réponses tronquées (cas cliniques) | 55,5 % | 17,1 % | 20,2 % | — |
 
 Le SFT apprend le **comportement attendu** (format, arrêt, style) mais n'apporte pas de gain de
-connaissances mesurable sur les QCM cliniques de MediQAl. Le ROUGE-L mesure la forme, pas la
-justesse clinique. Détails, ablation de la pénalité de répétition et limites : voir la
-[model card](reports/model_card_sft.md).
+connaissances mesurable sur les QCM cliniques de MediQAl ; le DPO n'en apporte pas davantage, ce
+qui était attendu (91 % des paires MedQA portent sur l'explication, pas sur la réponse). Le ROUGE-L
+mesure la forme, pas la justesse clinique. Détails, ablation de la pénalité de répétition et
+limites : voir la [model card](reports/model_card_sft.md).
 
 ## Structure
 
 ```
 configs/          paramètres de chaque étape (données, entraînement, évaluation)
   prive/          paramètres sensibles — NON versionné (voir « Anonymisation »)
-data/             raw/ → interim/ → processed/ — NON versionné
+data/             raw/ → interim/ → processed/, relecture/ — NON versionné
 reports/          rapports chiffrés (agrégats uniquement), carte du dataset, model card
 scripts/          préparation du pod GPU (setup_pod.sh)
 src/data/         pipeline de préparation des données
-src/training/     entraînement (SFT, puis DPO)
-src/evaluation/   évaluation et vérifications de l'adaptateur
+src/training/     entraînement (SFT, DPO) et fusion vérifiée
+src/evaluation/   évaluation, comparaisons, relecture de sécurité, vérifications
 tests/            tests (CI)
 docker/           images de déploiement
 mlflow/, mlruns/  suivi des expériences, rapatrié du pod — NON versionné
@@ -108,23 +151,37 @@ l'audit n'est pas au statut « valide ».
 ## Entraînement et évaluation
 
 Sur un pod GPU (RunPod, NVIDIA A40 48 Go), environnement activé, depuis la racine du dépôt.
-Chaque script dispose d'un mode `--smoke` qui valide la chaîne complète en quelques minutes.
+Les scripts d'entraînement et d'évaluation disposent d'un mode `--smoke` qui valide la chaîne
+complète en quelques minutes.
 
 | Étape | Commande | Rôle |
 |---|---|---|
 | SFT | `python -m src.training.sft` | LoRA + tokens du chat template, contrôles, publication de l'adaptateur |
-| Évaluation | `python -m src.evaluation.evaluate --modele base` puis `--modele sft` | même protocole pour chaque modèle (QCM, questions ouvertes, latence) |
+| Fusion | `python -m src.training.fusionner --base … --adaptateur … --repo …` | fusion, 5 contrôles bloquants, publication privée avec `provenance.json` |
+| DPO | `python -m src.training.dpo` | LoRA sur le SFT fusionné, contrôle de génération avant / après, récompenses sur le test, publication |
+| Évaluation | `python -m src.evaluation.evaluate --modele {base,sft,dpo,dpo_separe}` | même protocole pour chaque modèle (QCM, questions ouvertes, latence) |
 | Ablation | `python -m src.evaluation.evaluate --modele sft --repetition-penalty 1.0` | effet de la pénalité de répétition |
+| Comparaison appariée | `python -m src.evaluation.comparer_sft_dpo --sft … --dpo …` | troncatures (McNemar), longueur, langue ; grille de relecture en aveugle |
+| Relecture | `python -m src.evaluation.agreger_relecture` puis `relecture_complement` | bilan de la relecture de sécurité, report sur le modèle servi |
 | Vérification du checkpoint | `python -m src.evaluation.verifier_checkpoint_sft --output-dir <run> --adapter saidmo2/chsa-qwen3-1.7b-sft-lora` | adaptateur publié identique au meilleur checkpoint |
 | Vérification de la fusion | `python -m src.evaluation.verifier_adaptateur_sft --adapter saidmo2/chsa-qwen3-1.7b-sft-lora` | vecteurs appris conservés après `merge_and_unload` |
+| Fidélité de la fusion bf16 | `python -m src.evaluation.verifier_fusion --base … --adaptateur … [--preferences]` | part de la mise à jour effacée par l'arrondi, préférences conservées |
 
-- **Protocole d'évaluation** : génération déterministe (greedy), arrêt sur `<|im_end|>`, pénalité
-  de répétition 1.1 sur les réponses libres (valeur fixée a priori, jamais réglée sur le test),
-  références naïves pour les QCM, toutes les prédictions conservées pour relecture humaine.
-- **MLflow** : expériences `chsa-sft` et `chsa-eval` ; la base et les artefacts sont sur le volume
-  persistant du pod, puis rapatriés localement.
-- **Rien d'important n'existe seulement sur le pod** : code sur GitHub, adaptateurs sur le Hub,
-  suivi MLflow rapatrié.
+- **Protocole d'évaluation** : génération déterministe (greedy), arrêt sur `<|im_end|>` et
+  `<|endoftext|>`, pénalité de répétition 1.1 sur les réponses libres (valeur fixée a priori,
+  jamais réglée sur le test), références naïves pour les QCM, toutes les prédictions conservées
+  pour relecture humaine.
+- **Seuils d'acceptation fixés avant chaque évaluation** ; le test n'est jamais utilisé pour un
+  choix (checkpoint, hyperparamètre).
+- **Relecture de sécurité** : 20 cas cliniques tirés avec une graine fixée, en aveugle (réponses A / B
+  dans un ordre aléatoire, clé ouverte après la relecture), grille juste / partiel / faux / dangereux.
+  La grille et la clé sont conservées hors Git (`data/relecture/`) ; seuls les agrégats sont versionnés.
+- **MLflow** : expériences `chsa-sft`, `chsa-dpo` et `chsa-eval` ; la base et les artefacts sont
+  sur le volume persistant du pod, puis rapatriés localement.
+- **Rien d'important n'existe seulement sur le pod** : code sur GitHub, modèles et adaptateurs sur
+  le Hub, suivi MLflow et prédictions sauvegardés.
+- **Moindre privilège** : le pod n'a qu'un jeton GitHub en lecture ; les rapports produits sur le
+  pod sont rapatriés et commités depuis le poste de travail.
 
 ## Anonymisation (RGPD)
 
@@ -179,6 +236,6 @@ séparé.
 ## Licences
 
 - **Dataset dérivé** : CC BY 4.0 (la plus restrictive des sources), avec citation de chaque source.
-- **Adaptateur SFT** : Apache-2.0 (licence du modèle de base Qwen3), données d'entraînement citées
-  dans la model card.
+- **Adaptateurs SFT et DPO, modèle SFT fusionné** : Apache-2.0 (licence du modèle de base Qwen3),
+  données d'entraînement citées dans la model card.
 - **Code** : à préciser.
