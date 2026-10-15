@@ -20,6 +20,7 @@ Usage (sur le pod, environnement activé, depuis la racine du dépôt) :
     python -m src.evaluation.evaluate --modele sft
     python -m src.evaluation.evaluate --modele sft --repetition-penalty 1.0   # ablation greedy pur
     python -m src.evaluation.evaluate --modele dpo
+    python -m src.evaluation.evaluate --modele dpo_separe   # modèle servi (adaptateur non fusionné)
 """
 from __future__ import annotations
 
@@ -208,7 +209,11 @@ def main() -> None:
         from peft import PeftModel
         adapter_revision = api.model_info(model_cfg["adaptateur"]).sha
         model = PeftModel.from_pretrained(model, model_cfg["adaptateur"], revision=adapter_revision)
-        model = model.merge_and_unload()
+        # Fusion par défaut ; « fusionner: false » garde l'adaptateur séparé (calcul W·x + B·A·x,
+        # comme à l'entraînement) : la fusion bf16 efface une mise à jour trop petite
+        # (reports/verification_fusion_*.json)
+        if model_cfg.get("fusionner", True):
+            model = model.merge_and_unload()
     model.eval()
     # Arrêt sur <|im_end|> ET <|endoftext|> pour tous les modèles : le tokenizer du modèle Base a
     # <|endoftext|> pour EOS, celui du modèle SFT fusionné <|im_end|> ; même protocole pour tous
@@ -285,6 +290,8 @@ def main() -> None:
         mlflow.set_tags({"modele": args.modele, "modele_id": model_cfg["id"], "modele_revision": model_revision,
                          "adaptateur": model_cfg.get("adaptateur") or "aucun",
                          "adaptateur_revision": adapter_revision or "aucune",
+                         "adaptateur_fusionne": str(bool(model_cfg.get("adaptateur"))
+                                                    and model_cfg.get("fusionner", True)),
                          "dataset_revision": data_revision, "mode": "smoke" if args.smoke else "complet",
                          "gpu": torch.cuda.get_device_name(0)})
         mlflow.log_params({"batch_size": gen["batch_size"], "max_new_tokens_qcm": gen["max_new_tokens_qcm"],
