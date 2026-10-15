@@ -1,0 +1,49 @@
+{
+  "sft": "/workspace/outputs/eval/eval-sft-20261011-190107/predictions.jsonl",
+  "dpo": "/workspace/outputs/eval/eval-dpo_separe-20261015-145557/predictions.jsonl",
+  "max_new_tokens": 512,
+  "clinique": {
+    "n": 263,
+    "tronquees": {
+      "sft": 45,
+      "dpo": 53,
+      "les_deux": 24,
+      "sft_seulement": 21,
+      "dpo_seulement": 29,
+      "mcnemar_p": 0.3222
+    },
+    "tronquees_en_boucle": {
+      "sft": 10,
+      "dpo": 15
+    },
+    "longueur_mediane": {
+      "sft": 114,
+      "dpo": 134
+    },
+    "part_dpo_plus_longue": 0.4068,
+    "reponses_en_anglais": {
+      "sft": 5,
+      "dpo": 1
+    }
+  },
+  "medquad": {
+    "n": 773,
+    "tronquees": {
+      "sft": 52,
+      "dpo": 49,
+      "les_deux": 17,
+      "sft_seulement": 35,
+      "dpo_seulement": 32,
+      "mcnemar_p": 0.8072
+    },
+    "tronquees_en_boucle": {
+      "sft": 3,
+      "dpo": 3
+    },
+    "longueur_mediane": {
+      "sft": 182,
+      "dpo": 195
+    },
+    "part_dpo_plus_longue": 0.4463
+  }
+}
