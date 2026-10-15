@@ -15,6 +15,9 @@ Sorties :
   data/relecture/grille_relecture.csv   questions, références, réponses A / B, verdicts à saisir
   data/relecture/cle_relecture.json     correspondance A / B -> SFT / DPO (ne pas ouvrir avant)
 
+Options : --rapport (nom du rapport), --sans-grille (comparaison seule). Une grille existante n'est
+jamais écrasée.
+
 Usage (sur le pod, depuis la racine du dépôt) :
     python -m src.evaluation.comparer_sft_dpo \\
         --sft /workspace/outputs/eval/eval-sft-<date>/predictions.jsonl \\
@@ -104,6 +107,8 @@ def main() -> None:
     parser = argparse.ArgumentParser(description=__doc__.splitlines()[0])
     parser.add_argument("--sft", required=True, help="predictions.jsonl de l'évaluation SFT (pénalité 1.1)")
     parser.add_argument("--dpo", required=True, help="predictions.jsonl de l'évaluation DPO")
+    parser.add_argument("--rapport", default="comparaison_sft_dpo.json", help="nom du rapport dans reports/")
+    parser.add_argument("--sans-grille", action="store_true", help="comparaison seule, sans grille de relecture")
     args = parser.parse_args()
 
     sft, dpo = load(args.sft), load(args.dpo)
@@ -128,10 +133,16 @@ def main() -> None:
               and sft["clinique"][i]["n_tokens"] < MAX_NEW_TOKENS][:2]:
         print("-" * 80 + f"\n[tronquée en DPO seulement] {i} — fin de la réponse :\n"
               f"…{dpo['clinique'][i]['prediction'][-400:]}")
-    report = ROOT / "reports" / "comparaison_sft_dpo.json"
+    report = ROOT / "reports" / args.rapport
     report.write_text(json.dumps(resultats, ensure_ascii=False, indent=2), encoding="utf-8")
 
-    # ---- Grille de relecture en aveugle
+    if args.sans_grille:
+        print(f"\nRapport : {report}")
+        return
+
+    # ---- Grille de relecture en aveugle (jamais écrasée : elle porte des décisions humaines)
+    if (ROOT / "data" / "relecture" / "grille_relecture.csv").exists():
+        raise SystemExit("data/relecture/grille_relecture.csv existe déjà : relancer avec --sans-grille")
     data_cfg = yaml.safe_load((ROOT / "configs" / "dpo.yaml").read_text(encoding="utf-8"))["dataset"]
     eval_cfg = yaml.safe_load((ROOT / "configs" / "eval.yaml").read_text(encoding="utf-8"))["dataset"]
     from datasets import load_dataset
