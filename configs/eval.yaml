@@ -17,7 +17,7 @@ modeles:
   dpo:
     id: saidmo2/chsa-qwen3-1.7b-sft                # modèle SFT fusionné (src/training/fusionner.py)
     adaptateur: saidmo2/chsa-qwen3-1.7b-sft-dpo-lora   # fusionné en bf16 : ~94 % des coefficients effacés
-  dpo_separe:                                      # MODÈLE FINAL, tel qu'il sera servi (LoRA dans vLLM)
+  dpo_separe:                                     # second modèle, tel qu'il est servi (LoRA dans vLLM) ; le SFT fusionné est le modèle retenu
     id: saidmo2/chsa-qwen3-1.7b-sft
     adaptateur: saidmo2/chsa-qwen3-1.7b-sft-dpo-lora
     fusionner: false

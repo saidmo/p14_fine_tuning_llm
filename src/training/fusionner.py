@@ -3,7 +3,9 @@
 Deux usages dans le projet, avec le même script :
   - semaine 3 : base Qwen3-1.7B-Base + adaptateur SFT  -> modèle SFT fusionné, point de départ
     ET modèle de référence du DPO ;
-  - semaine 4 : modèle SFT fusionné + adaptateur DPO -> modèle final, servi par vLLM.
+  - semaine 4 : modèle SFT fusionné + adaptateur DPO -> fusion REFUSÉE par le contrôle 4
+     (accord top-1 95,3 % < 98 %) : l'adaptateur DPO est servi séparé par vLLM
+     (diagnostic : src/evaluation/verifier_fusion.py, reports/verification_fusion_*.json).
 
 Fermé par défaut : les deux révisions doivent être données explicitement (SHA de 40 caractères),
 et rien n'est publié si une vérification échoue :
