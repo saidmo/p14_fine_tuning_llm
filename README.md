@@ -18,7 +18,7 @@ démonstration servi par **vLLM** derrière une API **FastAPI**, avec un pipelin
 |---|---|---|
 | 1 | Préparation et structuration des données | ✅ dataset publié |
 | 2 | Fine-tuning supervisé (SFT) avec LoRA | ✅ adaptateur publié, évalué, model card |
-| 3 | Alignement par préférences (DPO) | ✅ adaptateur publié, évalué ; **non retenu par défaut** (voir « Modèle retenu ») |
+| 3 | Alignement par préférences (DPO) | ✅ adaptateur publié, évalué, model card ; **servi comme second modèle** (voir « Modèles servis ») |
 | 4 | Déploiement vLLM / FastAPI, CI/CD, rapport | à venir |
 
 ## Dataset (livrable 1)
@@ -51,12 +51,15 @@ La model card est versionnée dans [`reports/model_card_sft.md`](reports/model_c
   l'adaptateur publié, et conservation des vecteurs appris après fusion.
 - **Modèle SFT fusionné** (base + adaptateur, contrôles bloquants, `provenance.json`) :
   [`saidmo2/chsa-qwen3-1.7b-sft`](https://huggingface.co/saidmo2/chsa-qwen3-1.7b-sft), révision
-  `923746e7`. C'est le point de départ et la référence du DPO, et le **modèle retenu**.
+  `923746e7`. C'est le point de départ et la référence du DPO, et le **modèle servi par défaut**.
+  Sa model card, qui documente aussi le DPO, est versionnée dans
+  [`reports/model_card.md`](reports/model_card.md).
 
 ## Adaptateur DPO (semaine 3)
 
 Publié sur le Hugging Face Hub (dépôt privé) : [`saidmo2/chsa-qwen3-1.7b-sft-dpo-lora`](https://huggingface.co/saidmo2/chsa-qwen3-1.7b-sft-dpo-lora),
-révision `8818097d`, appliqué au modèle SFT fusionné.
+révision `8818097d`, appliqué au modèle SFT fusionné. Sa carte courte est versionnée dans
+[`reports/model_card_dpo.md`](reports/model_card_dpo.md).
 
 - **DPO standard** (loss sigmoid, β 0,1), lr 5e-6, 1 époque (188 pas), batch effectif 16 ; LoRA
   identique au SFT ; **référence** = modèle SFT fusionné, adaptateur désactivé ; **tokens du chat
@@ -70,7 +73,7 @@ révision `8818097d`, appliqué au modèle SFT fusionné.
   coefficients (17 % pour le SFT) ; l'adaptateur reste séparé et sera servi tel quel par vLLM.
   Diagnostic : [`reports/verification_fusion_*.json`](reports).
 
-## Modèle retenu
+## Modèles servis : SFT par défaut, DPO second modèle
 
 Seuils d'acceptation du DPO **fixés avant son évaluation**, appliqués au modèle tel qu'il sera servi :
 
@@ -87,7 +90,8 @@ Le DPO apprend les préférences visées, sans dégrader les QCM ni le français
 démontré qu'il était au moins aussi sûr que le SFT. **Décision : le SFT est servi par défaut ;
 le DPO est déployé comme second modèle**, accessible explicitement, à des fins de démonstration.
 
-Détails : [`reports/comparaison_sft_dpo_separe.json`](reports/comparaison_sft_dpo_separe.json),
+Détails : [`reports/model_card.md`](reports/model_card.md),
+[`reports/comparaison_sft_dpo_separe.json`](reports/comparaison_sft_dpo_separe.json),
 [`reports/relecture_securite_dpo_separe.json`](reports/relecture_securite_dpo_separe.json).
 
 ### Résultats sur le jeu de test (base, SFT, DPO servi)
@@ -109,7 +113,7 @@ Le SFT apprend le **comportement attendu** (format, arrêt, style) mais n'apport
 connaissances mesurable sur les QCM cliniques de MediQAl ; le DPO n'en apporte pas davantage, ce
 qui était attendu (91 % des paires MedQA portent sur l'explication, pas sur la réponse). Le ROUGE-L
 mesure la forme, pas la justesse clinique. Détails, ablation de la pénalité de répétition et
-limites : voir la [model card](reports/model_card_sft.md).
+limites : voir la [model card](reports/model_card.md).
 
 ## Structure
 
@@ -117,13 +121,13 @@ limites : voir la [model card](reports/model_card_sft.md).
 configs/          paramètres de chaque étape (données, entraînement, évaluation)
   prive/          paramètres sensibles — NON versionné (voir « Anonymisation »)
 data/             raw/ → interim/ → processed/, relecture/ — NON versionné
-reports/          rapports chiffrés (agrégats uniquement), carte du dataset, model card
+reports/          rapports chiffrés (agrégats uniquement), carte du dataset, model cards
 scripts/          préparation du pod GPU (setup_pod.sh)
 src/data/         pipeline de préparation des données
 src/training/     entraînement (SFT, DPO) et fusion vérifiée
 src/evaluation/   évaluation, comparaisons, relecture de sécurité, vérifications
-tests/            tests (CI)
-docker/           images de déploiement
+tests/            tests (CI) — semaine 4
+docker/           images de déploiement — semaine 4
 mlflow/, mlruns/  suivi des expériences, rapatrié du pod — NON versionné
 ```
 
@@ -238,4 +242,4 @@ séparé.
 - **Dataset dérivé** : CC BY 4.0 (la plus restrictive des sources), avec citation de chaque source.
 - **Adaptateurs SFT et DPO, modèle SFT fusionné** : Apache-2.0 (licence du modèle de base Qwen3),
   données d'entraînement citées dans la model card.
-- **Code** : à préciser.
+- **Code** : Apache-2.0 (voir [`LICENSE`](LICENSE)).
