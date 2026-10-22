@@ -32,3 +32,6 @@ Thumbs.db
 
 # Documentation
 docs/
+
+# fichiers de logs
+*.log
