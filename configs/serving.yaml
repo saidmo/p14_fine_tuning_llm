@@ -1,0 +1,92 @@
+# Déploiement du POC CHSA (semaine 4) — deux services sur RunPod :
+#   - pod GPU   : serveur vLLM (image officielle), modèle SFT + adaptateur DPO, protégé par clé d'API ;
+#   - passerelle: API FastAPI (image construite par la CI), seul point d'entrée des utilisateurs.
+# Une seule source de vérité pour les deux services. Les révisions sont celles des POIDS entraînés
+# et évalués (reports/model_card.md) ; la CI refuse toute révision qui n'est pas un SHA de 40 caractères.
+
+vllm:
+  image: vllm/vllm-openai:<VERSION>   # À ÉPINGLER : version vérifiée (Qwen3, LoRA) ; jamais « latest »
+  port: 8000
+  dtype: bfloat16                     # comme à l'entraînement et à l'évaluation
+  max_model_len: 2048                 # prompt ≤ 1 024 tokens (limite SFT) + réponse ≤ 512, avec marge
+  gpu_memory_utilization: 0.90
+  dossier_modeles: /workspace/modeles # volume du pod : téléchargement aux révisions épinglées
+  modele:
+    nom_servi: chsa-sft               # modèle servi par défaut
+    repo: saidmo2/chsa-qwen3-1.7b-sft
+    revision: 923746e75cca6091cbadae42a7a052addc4bb2db
+  adaptateurs:
+    - nom_servi: chsa-dpo             # second modèle, jamais par défaut
+      repo: saidmo2/chsa-qwen3-1.7b-sft-dpo-lora
+      revision: 8818097df7fab610d9b8109bcdc435192b893199
+      rang: 16                        # --max-lora-rank ; l'adaptateur n'est PAS fusionné (fusion bf16 refusée)
+
+passerelle:
+  modele_par_defaut: chsa-sft
+  modeles_autorises: [chsa-sft, chsa-dpo]
+  question_max_caracteres: 3000       # ≈ 1 000 tokens en français : reste sous la limite du SFT
+  delai_vllm_secondes: 60
+  # Variables d'environnement (secrets RunPod / GitHub), jamais dans le dépôt :
+  #   VLLM_URL       URL du pod vLLM (proxy RunPod, HTTPS)
+  #   VLLM_API_KEY   clé partagée passerelle → vLLM
+  #   CHSA_API_KEYS  empreintes SHA-256 des clés utilisateurs, séparées par des virgules
+  en_tete_cle: X-API-Key
+  avertissement: >-
+    Démonstration technique, hors usage clinique. Ce modèle n'est pas un dispositif médical :
+    ses réponses peuvent être fausses ou dangereuses et ne doivent pas guider une prise en charge.
+
+# Paramètres identiques au protocole d'évaluation (configs/eval.yaml) et au prompt d'entraînement.
+generation:
+  # Doit rester identique à configs/format.yaml (system_prompt) : vérifié par un test de la CI.
+  consigne_systeme: >-
+    Tu es l'assistant médical du service des urgences du Centre Hospitalier Saint-Aurélien (CHSA).
+    Tu aides le personnel soignant et les patients en répondant avec exactitude aux questions
+    médicales, dans la langue de la question.
+  chat_template_kwargs:
+    enable_thinking: false            # bloc <think> vide, comme à l'entraînement
+  temperature: 0.0                    # greedy, comme à l'évaluation
+  max_tokens: 512                     # au-delà : finish_reason = "length" → réponse signalée incomplète
+  repetition_penalty: 1.1             # valeur fixée a priori et confirmée par ablation (réponses libres)
+  stop_token_ids: [151645, 151643]    # <|im_end|>, <|endoftext|> — vérifiés contre le tokenizer par un test
+
+# Niveau de priorité : VALEUR NON VALIDÉE. Le modèle n'a jamais appris le triage et aucune donnée
+# annotée ne permet d'évaluer la justesse de ce champ ; seul son format est mesurable.
+priorite:
+  statut: non_validee                 # renvoyé avec chaque valeur, sans exception
+  echelle: FRENCH (SFMU), tri 3A et 3B regroupés
+  # Appel SÉPARÉ de la réponse principale, posé sous la forme d'un QCU : c'est le format que le SFT
+  # sait produire (100 % de format respecté), et le prompt de la réponse principale reste inchangé.
+  # Gabarit identique à src/data/normalize.py (format_mcq, consigne « mcq_single »).
+  question: Quel est le niveau de tri FRENCH de ce patient à l'accueil des urgences ?
+  options:                            # 5 lettres (A à E) : le SFT n'a jamais vu de 6e option
+    A: Tri 1 (le plus urgent)
+    B: Tri 2
+    C: Tri 3 (3A ou 3B)
+    D: Tri 4
+    E: Tri 5 (le moins urgent)
+  consigne: Une seule réponse est attendue. Indiquez la lettre et le texte de la réponse choisie.
+  max_tokens: 64                      # comme les QCM à l'évaluation
+  repetition_penalty: 1.0             # pas de pénalité sur les QCM, comme à l'évaluation
+
+journal:
+  chemin: /data/journal.sqlite        # volume de la passerelle
+  conservation_jours: 30
+  # Minimisation : jamais d'adresse IP ni de clé ; l'utilisateur est identifié par les 8 premiers
+  # caractères de l'empreinte de sa clé. Données de test uniquement (aucune donnée réelle de patient).
+
+# Validation du déploiement — seuils fixés AVANT la mesure, comme pour le DPO.
+validation:
+  graine: 42
+  coherence:                          # vLLM face aux prédictions conservées de transformers
+    echantillon_qcm: 500
+    echantillon_ouvertes: 100
+    accord_lettres_min: 0.95
+    ecart_exactitude_max_points: 2.0
+    taux_completes_ecart_max_points: 3.0
+  charge:
+    concurrences: [1, 4, 16]
+    requetes_par_niveau: 50
+    latence_p95_max_secondes: 15      # à 4 requêtes simultanées
+  priorite:
+    echantillon_cas_cliniques: 263    # eval_clinique complet
+    format_valide_min: 0.95           # seul critère mesurable ; la répartition des niveaux est rapportée
