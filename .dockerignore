@@ -1,0 +1,14 @@
+# Contexte de construction Docker : n'envoyer au démon que ce que les Dockerfile copient.
+# Exclut surtout les volumes (données, environnements, suivi MLflow) et les secrets.
+.git
+.venv*/
+data/
+mlflow/
+mlruns/
+outputs/
+configs/prive/
+docs/
+**/__pycache__/
+.pytest_cache/
+*.log
+*.sqlite*
