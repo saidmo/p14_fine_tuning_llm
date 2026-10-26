@@ -55,10 +55,10 @@ def creer_app(config: ConfigServing | None = None, secrets: Secrets | None = Non
                        cle: str = Depends(authentifier)) -> ReponseQuestion:
         nom = corps.modele or config.passerelle.modele_par_defaut
         if nom not in config.modeles:
-            raise HTTPException(status.HTTP_422_UNPROCESSABLE_ENTITY,
+            raise HTTPException(status.HTTP_422_UNPROCESSABLE_CONTENT,
                                 f"modèle inconnu : {nom!r} (autorisés : {sorted(config.modeles)})")
         if len(corps.question) > config.passerelle.question_max_caracteres:
-            raise HTTPException(status.HTTP_422_UNPROCESSABLE_ENTITY,
+            raise HTTPException(status.HTTP_422_UNPROCESSABLE_CONTENT,
                                 f"question trop longue : {len(corps.question)} caractères "
                                 f"(maximum {config.passerelle.question_max_caracteres})")
 
