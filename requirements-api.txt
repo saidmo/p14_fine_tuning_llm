@@ -1,0 +1,7 @@
+# Dépendances de la passerelle FastAPI (semaine 4 : déploiement)
+# Versions exactes : requirements-api.lock
+fastapi
+uvicorn
+httpx
+pydantic
+pyyaml
