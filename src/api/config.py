@@ -49,14 +49,24 @@ class ConfigVllm(_Strict):
     modele: ModeleHub
     adaptateurs: list[Adaptateur] = []
 
+    @property
+    def version_vllm(self) -> str:
+        """Version portée par l'étiquette de l'image : « v0.31.0-cu129@sha256:… » → « 0.31.0 »."""
+        etiquette = self.image.partition(":")[2].partition("@")[0]
+        trouvee = re.match(r"v?(\d+\.\d+\.\d+)", etiquette)
+        if not trouvee:
+            raise ValueError(f"image vLLM sans version lisible : {self.image!r}")
+        return trouvee.group(1)
+
     def verifier_image(self) -> None:
         """À appeler avant tout déploiement du pod GPU (CI, script de démarrage).
 
         La passerelle n'utilise pas l'image vLLM : ce contrôle n'empêche donc pas de la tester.
         """
-        nom, _, version = self.image.partition(":")
-        if not version or version == "latest" or "<" in version:
+        etiquette = self.image.partition(":")[2].partition("@")[0]
+        if not etiquette or etiquette == "latest" or "<" in etiquette:
             raise ValueError(f"image vLLM non épinglée : {self.image!r}")
+        self.version_vllm                                   # l'étiquette doit porter une version
 
 
 class ConfigPasserelle(_Strict):
