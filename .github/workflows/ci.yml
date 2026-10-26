@@ -1,0 +1,73 @@
+# CI de la passerelle (semaine 4) — à chaque push et pull request, sans GPU ni secret :
+#   1. tests : comportement de la passerelle (faux vLLM) et cohérence avec l'entraînement ;
+#   2. image : construction de l'image Docker, puis essai de fumée du conteneur
+#      (GPU éteint simulé : /sante « degrade », question → 503 journalisée).
+# La publication de l'image et le déploiement relèvent du workflow de CD (sur tag de version).
+name: CI
+
+on:
+  push:
+  pull_request:
+
+permissions:
+  contents: read            # moindre privilège : la CI lit le dépôt, n'écrit rien
+
+concurrency:                # un nouveau push annule le run en cours sur la même branche
+  group: ci-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  tests:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"            # comme .venv-api et l'image
+          cache: pip
+          cache-dependency-path: requirements-api.lock
+      - name: Dépendances (versions exactes de l'image)
+        run: python -m pip install -r requirements-api.lock pytest==9.1.1
+      - name: Tests
+        run: python -m pytest tests -v      # test_tokens_d_arret ignoré : transformers absent
+
+  image:
+    needs: tests                            # pas d'image si les tests échouent
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - name: Construction
+        run: docker build -f docker/passerelle.Dockerfile -t chsa-passerelle:ci .
+      - name: Essai de fumée du conteneur (vLLM injoignable)
+        run: |
+          set -euo pipefail
+          CLE="cle-ci-$RANDOM$RANDOM"
+          EMPREINTE=$(printf '%s' "$CLE" | sha256sum | cut -d' ' -f1)
+          docker run -d --name passerelle -p 8080:8080 \
+            -e VLLM_URL=http://127.0.0.1:8999 -e VLLM_API_KEY=ci \
+            -e CHSA_API_KEYS="$EMPREINTE" chsa-passerelle:ci
+
+          # attendre que le contrôle de santé du conteneur passe à « healthy »
+          for i in $(seq 1 30); do
+            etat=$(docker inspect --format '{{.State.Health.Status}}' passerelle)
+            [ "$etat" = "healthy" ] && break
+            [ "$etat" = "unhealthy" ] && { docker logs passerelle; exit 1; }
+            sleep 2
+          done
+          [ "$etat" = "healthy" ] || { echo "conteneur non sain : $etat"; docker logs passerelle; exit 1; }
+
+          sante=$(curl -sf http://127.0.0.1:8080/sante)
+          echo "$sante"
+          echo "$sante" | grep -q '"statut":"degrade"'
+
+          code=$(curl -s -o /dev/null -w '%{http_code}' -X POST http://127.0.0.1:8080/v1/reponses \
+            -H "Content-Type: application/json" -H "X-API-Key: $CLE" -d '{"question":"test"}')
+          echo "POST /v1/reponses → $code"
+          [ "$code" = "503" ]               # 500 trahirait un journal non inscriptible
+
+          code=$(curl -s -o /dev/null -w '%{http_code}' -X POST http://127.0.0.1:8080/v1/reponses \
+            -H "Content-Type: application/json" -H "X-API-Key: mauvaise" -d '{"question":"test"}')
+          [ "$code" = "401" ]
+      - name: Journaux du conteneur
+        if: always()
+        run: docker logs passerelle || true
