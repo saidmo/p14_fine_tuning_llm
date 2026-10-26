@@ -18,10 +18,10 @@ concurrency:                # un nouveau push annule le run en cours sur la mêm
 
 jobs:
   tests:
-    runs-on: ubuntu-latest
+    runs-on: ubuntu-24.04
     steps:
-      - uses: actions/checkout@v4
-      - uses: actions/setup-python@v5
+      - uses: actions/checkout@v5
+      - uses: actions/setup-python@v6
         with:
           python-version: "3.12"            # comme .venv-api et l'image
           cache: pip
@@ -33,9 +33,9 @@ jobs:
 
   image:
     needs: tests                            # pas d'image si les tests échouent
-    runs-on: ubuntu-latest
+    runs-on: ubuntu-24.04
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v5
       - name: Construction
         run: docker build -f docker/passerelle.Dockerfile -t chsa-passerelle:ci .
       - name: Essai de fumée du conteneur (vLLM injoignable)
