@@ -7,6 +7,7 @@ name: CI
 
 on:
   push:
+    branches: ["**"]        # pas les étiquettes : le CD exécute déjà la CI avant de publier
   pull_request:
   workflow_call:            # réutilisé par le workflow de CD avant toute publication
 
@@ -14,7 +15,7 @@ permissions:
   contents: read            # moindre privilège : la CI lit le dépôt, n'écrit rien
 
 concurrency:                # un nouveau push annule le run en cours sur la même branche
-  group: ci-${{ github.ref }}
+  group: ci-${{ github.workflow }}-${{ github.ref }}
   cancel-in-progress: true
 
 jobs:
