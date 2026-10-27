@@ -9,7 +9,7 @@ vllm:
   port: 8000                          # port PUBLIC : le filtre (liste blanche de routes + clé)
   port_interne: 8001                  # vLLM, sur 127.0.0.1 : injoignable depuis Internet
   dtype: bfloat16                     # comme à l'entraînement et à l'évaluation
-  max_model_len: 2048                 # prompt ≤ 1 024 tokens (limite SFT) + réponse ≤ 512, avec marge
+  max_model_len: 4096                 # garantit qu'une question acceptée tient dans le contexte (contrôlé par config.py)
   gpu_memory_utilization: 0.90
   dossier_modeles: /workspace/modeles # volume du pod : téléchargement aux révisions épinglées
   modele:
@@ -25,7 +25,7 @@ vllm:
 passerelle:
   modele_par_defaut: chsa-sft
   modeles_autorises: [chsa-sft, chsa-dpo]
-  question_max_caracteres: 3000       # ≈ 1 000 tokens en français : reste sous la limite du SFT
+  question_max_caracteres: 5000       # plus longue question des données : 4 011 caractères (eval_clinique)
   delai_vllm_secondes: 60
   # Variables d'environnement (secrets RunPod / GitHub), jamais dans le dépôt :
   #   VLLM_URL       URL du pod vLLM (proxy RunPod, HTTPS)

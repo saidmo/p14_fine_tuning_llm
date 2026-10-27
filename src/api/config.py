@@ -16,6 +16,8 @@ CHEMIN_PAR_DEFAUT = "configs/serving.yaml"
 SHA_REVISION = re.compile(r"[0-9a-f]{40}")
 SHA256 = re.compile(r"[0-9a-f]{64}")
 LETTRES_QCM = "ABCDE"           # lettres vues par le SFT (src/data/normalize.py)
+CARACTERES_PAR_TOKEN_MIN = 1.5      # hypothèse prudente : le français en compte environ 4
+MARGE_PROMPT_TOKENS = 128           # consigne système et balises du chat template (≈ 70 mesurés)
 
 
 class _Strict(BaseModel):
@@ -141,6 +143,16 @@ class ConfigServing(_Strict):
     def modeles(self) -> dict[str, ModeleHub]:
         """Modèles servis, indexés par leur nom servi."""
         return {m.nom_servi: m for m in [self.vllm.modele, *self.vllm.adaptateurs]}
+
+    @model_validator(mode="after")
+    def question_tient_dans_le_contexte(self) -> "ConfigServing":
+        """Une question acceptée par la passerelle ne doit jamais dépasser le contexte de vLLM."""
+        pire_cas = (self.passerelle.question_max_caracteres / CARACTERES_PAR_TOKEN_MIN
+                    + MARGE_PROMPT_TOKENS + self.generation.max_tokens)
+        if pire_cas > self.vllm.max_model_len:
+            raise ValueError(f"question_max_caracteres trop grand : jusqu'à {pire_cas:.0f} tokens "
+                             f"pour max_model_len = {self.vllm.max_model_len}")
+        return self
 
 
 def charger_config(chemin: str | Path | None = None) -> ConfigServing:
