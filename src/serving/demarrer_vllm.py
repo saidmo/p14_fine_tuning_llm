@@ -1,13 +1,18 @@
 """Démarrage du serveur vLLM sur le pod GPU (semaine 4).
 
 À lancer DANS le pod (image vllm/vllm-openai), depuis la racine du dépôt :
-    python -m src.serving.demarrer_vllm              # contrôles, téléchargement, puis vllm serve
+    python -m src.serving.demarrer_vllm              # contrôles, téléchargement, vLLM, puis filtre
     python -m src.serving.demarrer_vllm --verifier   # contrôles et commande affichée, sans lancer
 
 Fermé par défaut : le serveur ne démarre pas si
   - l'image n'est pas épinglée dans configs/serving.yaml, ou si la version de vLLM installée
     n'est pas celle de l'étiquette (le pod ne tourne pas sur l'image prévue) ;
   - HF_TOKEN (dépôts privés) ou VLLM_API_KEY (protection de l'API) est absent.
+
+Deux processus :
+  - vLLM, sur 127.0.0.1:<port_interne> : injoignable depuis Internet ;
+  - le filtre (src/serving/filtre_vllm.py), sur 0.0.0.0:<port> : liste blanche de routes et clé.
+Si vLLM s'arrête, le filtre s'arrête aussi : jamais de point d'entrée public sans modèle derrière.
 
 Le modèle de base est chargé par vLLM à sa révision épinglée (--revision). L'adaptateur DPO est
 téléchargé à SA révision épinglée dans un dossier propre, puis passé par son chemin : il est
@@ -17,16 +22,18 @@ serait visible dans la liste des processus) : vLLM la lit dans VLLM_API_KEY.
 import argparse
 import os
 import shlex
+import subprocess
 import sys
+import threading
 from pathlib import Path, PurePath
 
 from src.api.config import ConfigServing, charger_config
 
 
 def verifier_environnement(config: ConfigServing) -> None:
-    config.vllm.verifier_image()                                   
+    config.vllm.verifier_image()                                   # pas de « latest » ni de <VERSION>
     import vllm                                                    # présent dans l'image vLLM seulement
-    installee = vllm.__version__.split("+")[0]           # « 0.31.0+cu129 » → « 0.31.0 »
+    installee = vllm.__version__.split("+")[0]                     # « 0.31.0+cu129 » → « 0.31.0 »
     if installee != config.vllm.version_vllm:
         raise SystemExit(f"vLLM installé {vllm.__version__} ≠ version épinglée "
                          f"{config.vllm.version_vllm} ({config.vllm.image}) : "
@@ -54,13 +61,14 @@ def commande(config: ConfigServing, chemins: dict[str, PurePath]) -> list[str]:
            "--revision", v.modele.revision,
            "--tokenizer-revision", v.modele.revision,
            "--served-model-name", v.modele.nom_servi,
-           "--download-dir", v.dossier_modeles,                     # volume : pas de retéléchargement
+           "--download-dir", v.dossier_modeles,                     # pas de retéléchargement au relancement
            "--dtype", v.dtype,
            "--max-model-len", str(v.max_model_len),
            "--gpu-memory-utilization", str(v.gpu_memory_utilization),
            "--generation-config", "vllm",       # ignorer les valeurs par défaut du dépôt du modèle :
                                                 # la passerelle envoie tous les paramètres explicitement
-           "--host", "0.0.0.0", "--port", str(v.port)]
+           "--disable-fastapi-docs",
+           "--host", "127.0.0.1", "--port", str(v.port_interne)]    # joignable par le filtre seulement
     if v.adaptateurs:
         cmd += ["--enable-lora",
                 "--max-lora-rank", str(max(a.rang for a in v.adaptateurs)),
@@ -81,7 +89,29 @@ def main() -> None:
     print("Commande :", shlex.join(cmd), flush=True)               # aucun secret dedans
     if args.verifier:
         return
-    os.execvp(cmd[0], cmd)          # vLLM remplace ce processus : il reçoit directement les signaux
+
+    import uvicorn
+    from src.serving.filtre_vllm import creer_filtre
+
+    vllm = subprocess.Popen(cmd)
+    arret_demande = threading.Event()
+
+    def surveiller() -> None:
+        """vLLM arrêté sans qu'on l'ait demandé (erreur, mémoire…) → arrêt immédiat du filtre :
+        le port public disparaît avec le modèle."""
+        code = vllm.wait()
+        if not arret_demande.is_set():
+            print(f"vLLM s'est arrêté (code {code}) : arrêt du filtre", flush=True)
+            os._exit(1)
+
+    threading.Thread(target=surveiller, daemon=True).start()
+    filtre = creer_filtre(os.environ["VLLM_API_KEY"], f"http://127.0.0.1:{config.vllm.port_interne}")
+    try:
+        uvicorn.run(filtre, host="0.0.0.0", port=config.vllm.port)  # rend la main sur SIGTERM / SIGINT
+    finally:
+        arret_demande.set()
+        vllm.terminate()
+        vllm.wait(timeout=60)
 
 
 if __name__ == "__main__":

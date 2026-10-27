@@ -38,3 +38,8 @@ def test_image_vllm_epinglee():
     """Maintenant que la version est choisie, la CI refuse toute image non épinglée."""
     CONFIG.vllm.verifier_image()
     assert CONFIG.vllm.version_vllm == "0.31.0"
+
+def test_vllm_injoignable_depuis_l_exterieur():
+    assert valeur("--host") == "127.0.0.1"
+    assert valeur("--port") == str(CONFIG.vllm.port_interne)
+    assert "--disable-fastapi-docs" in CMD

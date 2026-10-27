@@ -42,6 +42,7 @@ class Adaptateur(ModeleHub):
 class ConfigVllm(_Strict):
     image: str
     port: int
+    port_interne: int
     dtype: str
     max_model_len: int = Field(gt=0)
     gpu_memory_utilization: float = Field(gt=0, le=1)
@@ -67,7 +68,12 @@ class ConfigVllm(_Strict):
         if not etiquette or etiquette == "latest" or "<" in etiquette:
             raise ValueError(f"image vLLM non épinglée : {self.image!r}")
         self.version_vllm                                   # l'étiquette doit porter une version
-
+    
+    @model_validator(mode="after")
+    def ports_distincts(self) -> "ConfigVllm":
+        if self.port == self.port_interne:
+            raise ValueError("port et port_interne doivent différer : vLLM ne doit pas être exposé")
+        return self
 
 class ConfigPasserelle(_Strict):
     modele_par_defaut: str
