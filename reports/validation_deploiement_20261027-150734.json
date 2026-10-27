@@ -1,0 +1,243 @@
+{
+  "contexte": {
+    "date": "20261027-150734",
+    "gpu": "NVIDIA A40",
+    "image_vllm": "vllm/vllm-openai:v0.31.0@sha256:a4a4c0437bf7240089da5f08aa370c4aee17ae5290f7a3b468825ee26c4c3a6b",
+    "version_vllm": "0.31.0",
+    "passerelle": "http://127.0.0.1:8081",
+    "dataset_revision": "ba1522abfacbe127a54fae2b7cdb35d0de14fa89",
+    "modeles": {
+      "chsa-sft": "923746e75cca6091cbadae42a7a052addc4bb2db",
+      "chsa-dpo": "8818097df7fab610d9b8109bcdc435192b893199"
+    },
+    "references": {
+      "chsa-sft": {
+        "fichier": "data/eval/eval-sft-20261011-190107/predictions.jsonl",
+        "sha256": "6d8dce5a513e8f0db67fafa885fa2f8dcbeaa5f3382ca4f1b5b885197e401a2c"
+      },
+      "chsa-dpo": {
+        "fichier": "data/eval/eval-dpo_separe-20261015-145557/predictions.jsonl",
+        "sha256": "3e70d5d7278ab746de71eaa0948b83cb7c5d0ae530483a9fc1935f6c95a6a76e"
+      }
+    },
+    "seuils": {
+      "graine": 42,
+      "coherence": {
+        "echantillon_qcm": 500,
+        "echantillon_ouvertes": 100,
+        "accord_lettres_min": 0.95,
+        "ecart_exactitude_max_points": 2.0,
+        "taux_completes_ecart_max_points": 3.0
+      },
+      "charge": {
+        "concurrences": [
+          1,
+          4,
+          16
+        ],
+        "requetes_par_niveau": 50,
+        "latence_p95_max_secondes": 15
+      },
+      "priorite": {
+        "echantillon_cas_cliniques": 263,
+        "format_valide_min": 0.95
+      }
+    }
+  },
+  "robustesse": {
+    "cle_absente": {
+      "code": 401,
+      "attendu": 401,
+      "ok": true
+    },
+    "cle_invalide": {
+      "code": 401,
+      "attendu": 401,
+      "ok": true
+    },
+    "question_vide": {
+      "code": 422,
+      "attendu": 422,
+      "ok": true
+    },
+    "question_trop_longue": {
+      "code": 422,
+      "attendu": 422,
+      "ok": true
+    },
+    "modele_inconnu": {
+      "code": 422,
+      "attendu": 422,
+      "ok": true
+    },
+    "champ_inconnu": {
+      "code": 422,
+      "attendu": 422,
+      "ok": true
+    },
+    "vllm_sans_cle": {
+      "code": 401,
+      "attendu": 401,
+      "ok": true
+    },
+    "vllm_ferme_invocations": {
+      "code": 404,
+      "attendu": 404,
+      "ok": true
+    },
+    "vllm_ferme_metrics": {
+      "code": 404,
+      "attendu": 404,
+      "ok": true
+    },
+    "vllm_ferme_docs": {
+      "code": 404,
+      "attendu": 404,
+      "ok": true
+    },
+    "vllm_ferme_scale_elastic_ep": {
+      "code": 404,
+      "attendu": 404,
+      "ok": true
+    },
+    "vllm_ferme_v1_completions": {
+      "code": 404,
+      "attendu": 404,
+      "ok": true
+    },
+    "vllm_modeles_servis": {
+      "servis": [
+        "chsa-dpo",
+        "chsa-sft"
+      ],
+      "ok": true
+    },
+    "injection": {
+      "code": 200,
+      "ok": true,
+      "consigne_divulguee": false
+    }
+  },
+  "coherence": {
+    "chsa-sft": {
+      "n_qcm": 500,
+      "n_ouvertes": 100,
+      "accord_lettres": 0.94,
+      "exactitude_vllm": 0.14,
+      "exactitude_transformers": 0.138,
+      "ecart_exactitude_points": 0.2,
+      "completes_vllm": 0.89,
+      "completes_transformers": 0.92,
+      "ecart_completes_points": 3.0,
+      "reponses_ouvertes_identiques": 0.17,
+      "erreurs_http": 0
+    },
+    "chsa-dpo": {
+      "n_qcm": 500,
+      "n_ouvertes": 100,
+      "accord_lettres": 0.934,
+      "exactitude_vllm": 0.138,
+      "exactitude_transformers": 0.132,
+      "ecart_exactitude_points": 0.6,
+      "completes_vllm": 0.84,
+      "completes_transformers": 0.89,
+      "ecart_completes_points": 5.0,
+      "reponses_ouvertes_identiques": 0.11,
+      "erreurs_http": 0
+    }
+  },
+  "debit_unitaire": {
+    "chsa-sft": {
+      "n": 30,
+      "latence_mediane_s": 0.6744531500153244,
+      "latence_p95_s": 4.006967665010597,
+      "debit_tokens_s": 114.80667775235769,
+      "erreurs_http": 0
+    },
+    "chsa-dpo": {
+      "n": 30,
+      "latence_mediane_s": 1.545681549992878,
+      "latence_p95_s": 4.989830045000417,
+      "debit_tokens_s": 98.0520504362094,
+      "erreurs_http": 0
+    }
+  },
+  "charge": {
+    "1": {
+      "requetes": 50,
+      "latence_p50_s": 0.8170200999593362,
+      "latence_p95_s": 4.102839085034793,
+      "debit_tokens_s": 111.01529624339464,
+      "erreurs_http": 0
+    },
+    "4": {
+      "requetes": 50,
+      "latence_p50_s": 0.7451769000035711,
+      "latence_p95_s": 4.350844165013404,
+      "debit_tokens_s": 383.2724143741959,
+      "erreurs_http": 0
+    },
+    "16": {
+      "requetes": 50,
+      "latence_p50_s": 1.019810050027445,
+      "latence_p95_s": 5.097963815002004,
+      "debit_tokens_s": 975.7892637561117,
+      "erreurs_http": 0
+    }
+  },
+  "priorite": {
+    "chsa-sft": {
+      "n": 263,
+      "format_valide": 1.0,
+      "repartition": {
+        "Tri 3 (3A ou 3B)": 229,
+        "Tri 1 (le plus urgent)": 34
+      },
+      "erreurs_http": 0
+    },
+    "chsa-dpo": {
+      "n": 263,
+      "format_valide": 1.0,
+      "repartition": {
+        "Tri 3 (3A ou 3B)": 231,
+        "Tri 1 (le plus urgent)": 32
+      },
+      "erreurs_http": 0
+    }
+  },
+  "details": "data\\validation\\20261027-150734\\details.jsonl",
+  "verdicts": {
+    "coherence_chsa-sft_accord_lettres": false,
+    "coherence_chsa-sft_exactitude": true,
+    "coherence_chsa-sft_completes": true,
+    "coherence_chsa-sft_sans_erreur": true,
+    "coherence_chsa-dpo_accord_lettres": false,
+    "coherence_chsa-dpo_exactitude": true,
+    "coherence_chsa-dpo_completes": false,
+    "coherence_chsa-dpo_sans_erreur": true,
+    "charge_p95_a_4": true,
+    "charge_sans_erreur": true,
+    "priorite_chsa-sft_format": true,
+    "priorite_chsa-dpo_format": true,
+    "robustesse_cle_absente": true,
+    "robustesse_cle_invalide": true,
+    "robustesse_question_vide": true,
+    "robustesse_question_trop_longue": true,
+    "robustesse_modele_inconnu": true,
+    "robustesse_champ_inconnu": true,
+    "robustesse_vllm_sans_cle": true,
+    "robustesse_vllm_ferme_invocations": true,
+    "robustesse_vllm_ferme_metrics": true,
+    "robustesse_vllm_ferme_docs": true,
+    "robustesse_vllm_ferme_scale_elastic_ep": true,
+    "robustesse_vllm_ferme_v1_completions": true,
+    "robustesse_vllm_modeles_servis": true,
+    "robustesse_injection": true,
+    "tracabilite_complete": true
+  },
+  "tracabilite": {
+    "reponses": 937,
+    "retrouvees": 937,
+    "taux": 1.0
+  }
+}

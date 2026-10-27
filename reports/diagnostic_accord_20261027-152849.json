@@ -1,0 +1,40 @@
+{
+  "chsa-sft": {
+    "qcm": 500,
+    "desaccords": 30,
+    "reproductibles_vllm": 0.938,
+    "desaccords_mesurables": 29,
+    "ecart_median_desaccords": 0.25,
+    "ecart_max_desaccords": 0.2500000596046448,
+    "non_mesurables": {
+      "début du run C différent de A": 1
+    },
+    "quasi_egalites": 28,
+    "part_quasi_egalites": 0.9333333333333333,
+    "c_rejoint_transformers": 16,
+    "ecart_top2_median_accords": 13.499999523163865
+  },
+  "chsa-dpo": {
+    "qcm": 500,
+    "desaccords": 33,
+    "reproductibles_vllm": 0.946,
+    "desaccords_mesurables": 33,
+    "ecart_median_desaccords": 0.0,
+    "ecart_max_desaccords": 0.25,
+    "non_mesurables": {},
+    "quasi_egalites": 33,
+    "part_quasi_egalites": 1.0,
+    "c_rejoint_transformers": 17,
+    "ecart_top2_median_accords": 13.250000119213155
+  },
+  "criteres": {
+    "seuil_quasi_egalite_nats": 0.25,
+    "part_min_confirmation": 0.9
+  },
+  "verdicts": {
+    "hypothese_confirmee_chsa-sft": true,
+    "hypothese_confirmee_chsa-dpo": true
+  },
+  "rapport_validation": "reports/validation_deploiement_20261027-150734.json",
+  "details": "data\\validation\\20261027-150734\\diagnostic_accord_20261027-152849.jsonl"
+}
