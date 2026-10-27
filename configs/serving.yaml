@@ -5,7 +5,7 @@
 # et évalués (reports/model_card.md) ; la CI refuse toute révision qui n'est pas un SHA de 40 caractères.
 
 vllm:
-  image: vllm/vllm-openai:v0.31.0-cu129@sha256:b18abb2df97b8f798e81862bd93f872ea18613372e2c3adc0cc2ac21e66ac12f   # stable (> 14 jours), CUDA 12.9, linux/amd64
+  image: vllm/vllm-openai:v0.31.0@sha256:a4a4c0437bf7240089da5f08aa370c4aee17ae5290f7a3b468825ee26c4c3a6b   # stable (> 14 jours), CUDA 13.0.2, linux/amd64 ; pilote CUDA ≥ 13.0 requis. La variante -cu129 est écartée : torchcodec y est compilé pour CUDA 13 (libnvrtc.so.13 absente)
   port: 8000
   dtype: bfloat16                     # comme à l'entraînement et à l'évaluation
   max_model_len: 2048                 # prompt ≤ 1 024 tokens (limite SFT) + réponse ≤ 512, avec marge
