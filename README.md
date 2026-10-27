@@ -19,7 +19,7 @@ démonstration servi par **vLLM** derrière une API **FastAPI**, avec un pipelin
 | 1 | Préparation et structuration des données | ✅ dataset publié |
 | 2 | Fine-tuning supervisé (SFT) avec LoRA | ✅ adaptateur publié, évalué, model card |
 | 3 | Alignement par préférences (DPO) | ✅ adaptateur publié, évalué, model card ; **servi comme second modèle** (voir « Modèles servis ») |
-| 4 | Déploiement vLLM / FastAPI, CI/CD, rapport | à venir |
+| 4 | Déploiement vLLM / FastAPI, CI/CD, validation, rapport | ✅ endpoint déployé sur RunPod, validé ; [rapport technique](reports/rapport_technique.pdf) |
 
 ## Dataset (livrable 1)
 
@@ -115,6 +115,70 @@ qui était attendu (91 % des paires MedQA portent sur l'explication, pas sur la 
 mesure la forme, pas la justesse clinique. Détails, ablation de la pénalité de répétition et
 limites : voir la [model card](reports/model_card.md).
 
+## Déploiement (livrable 3)
+
+Endpoint de démonstration sur **RunPod**, en deux services :
+
+```
+utilisateur ──HTTPS──▶ passerelle FastAPI (pod CPU) ──HTTPS──▶ filtre ──▶ vLLM (pod GPU A40)
+   clé X-API-Key        authentification, contrôles,          liste blanche    SFT (défaut)
+                        journal SQLite (network volume)       + clé            + adaptateur DPO
+```
+
+| Composant | Image (épinglée) | Rôle |
+|---|---|---|
+| Passerelle | `ghcr.io/saidmo/chsa-passerelle:v0.1.0@sha256:9247ef5d…` (publiée par le CD) | seul point d'entrée des utilisateurs : clé, validation, réponse + priorité, avertissement, journal |
+| vLLM | `vllm/vllm-openai:v0.31.0@sha256:a4a4c043…` (CUDA 13.0) | sert `chsa-sft` (défaut) et `chsa-dpo` (LoRA appliqué à l'exécution) |
+| Filtre | même pod que vLLM (`src/serving/filtre_vllm.py`) | seules 5 routes autorisées, clé vérifiée ; vLLM n'écoute que sur 127.0.0.1 |
+
+- **API** : `POST /v1/reponses` (question, modèle, priorité), `GET /sante`. Chaque réponse renvoie
+  le modèle, la révision des poids, l'identifiant d'interaction, `complete` (réponse tronquée
+  signalée) et l'avertissement « hors usage clinique ».
+- **Niveau de priorité** : demandé par le descriptif, il est produit par le modèle (QCU sur
+  l'échelle FRENCH, 3A et 3B regroupés) mais toujours marqué **`non_validee`** : le modèle n'a
+  jamais appris le triage.
+- **Configuration unique** : [`configs/serving.yaml`](configs/serving.yaml) (révisions, paramètres
+  de génération identiques à l'évaluation, seuils de validation fixés a priori).
+- **Sécurité** : quatre clés cloisonnées (RunPod, vLLM, utilisateurs, Hugging Face en lecture
+  seule) ; empreintes SHA-256 des clés utilisateurs seulement ; journal sans IP ni clé, purgé à
+  30 jours ; images sans secret ni poids.
+
+### Validation du déploiement
+
+Rapport : [`reports/validation_deploiement_20261027-150734.json`](reports/validation_deploiement_20261027-150734.json),
+diagnostic : [`reports/diagnostic_accord_20261027-152849.json`](reports/diagnostic_accord_20261027-152849.json).
+
+| Volet | Résultat |
+|---|---|
+| Prompt servi = prompt d'entraînement | identique au token près |
+| Débit (1 requête, vs transformers) | SFT 114 tok/s (×2,8), DPO 98 tok/s (×4,2) |
+| Charge (16 requêtes simultanées) | 1 052 tok/s, p95 5,0 s, aucune erreur |
+| Exactitude vLLM vs transformers | écart 0,2 et 0,6 point ✅ |
+| Accord des lettres QCM (seuil 95 %) | 94,0 % et 93,4 % ❌ — égalités de logits bf16, vLLM ne se reproduit lui-même qu'à 94 % |
+| Priorité : format valide | 100 % (mais seulement Tri 1 et Tri 3 : biais de lettre) |
+| Robustesse, routes fermées, traçabilité | ✅ (917 / 917 réponses retrouvées dans le journal) |
+
+**Décision (checklist go / no-go du rapport)** : *go* pour la démonstration technique, avec
+réserve documentée ; *no-go* pour tout usage clinique.
+
+### Démarrer l'endpoint
+
+1. Pod vLLM (template RunPod `chsa-vllm-premier-lancement`, A40, pilote CUDA ≥ 13.0) :
+   `apt-get install -y git`, cloner le dépôt dans `/workspace`, puis
+   `nohup python3 -m src.serving.demarrer_vllm > /workspace/vllm.log 2>&1 &`
+   (contrôles, téléchargement aux révisions épinglées, vLLM puis filtre ; environ 2 minutes).
+2. Pod passerelle (template `chsa-passerelle`, CPU, network volume `chsa-journal` sur `/data`) :
+   démarre seul ; `GET /sante` doit répondre `"statut":"ok"`.
+3. Arrêter les deux pods hors démonstration.
+
+### CI/CD (GitHub Actions)
+
+- **CI** ([`ci.yml`](.github/workflows/ci.yml), à chaque push) : tests de la passerelle avec un
+  faux vLLM, tests de cohérence avec le code d'entraînement, tests du filtre et du démarrage, puis
+  construction de l'image et essai de fumée du conteneur. Sans GPU ni secret.
+- **CD** ([`cd.yml`](.github/workflows/cd.yml), sur étiquette `vX.Y.Z`) : CI complète, puis
+  publication de l'image sur GHCR sous sa version (jamais `latest`, jamais écrasée).
+
 ## Structure
 
 ```
@@ -126,8 +190,11 @@ scripts/          préparation du pod GPU (setup_pod.sh)
 src/data/         pipeline de préparation des données
 src/training/     entraînement (SFT, DPO) et fusion vérifiée
 src/evaluation/   évaluation, comparaisons, relecture de sécurité, vérifications
-tests/            tests (CI) — semaine 4
-docker/           images de déploiement — semaine 4
+src/api/          passerelle FastAPI (configuration, schémas, client vLLM, journal)
+src/serving/      pod vLLM (démarrage, filtre), validation du déploiement, diagnostic
+tests/            tests (CI)
+docker/           image de la passerelle
+.github/workflows CI et CD
 mlflow/, mlruns/  suivi des expériences, rapatrié du pod — NON versionné
 ```
 
@@ -234,8 +301,16 @@ jamais remplacer ce PyTorch** (contrainte de version), puis vérifie le GPU, le 
 versions des bibliothèques et la présence du jeton Hugging Face.
 
 Les dépendances sont décrites dans `requirements-train.txt`, avec les versions exactes dans
-`requirements-train.lock`. Celles du déploiement (semaine 4) seront décrites dans un fichier
-séparé.
+`requirements-train.lock`.
+
+**Passerelle (tests en local)** : environnement séparé, Python 3.12 comme l'image.
+
+```
+py -3.12 -m venv .venv-api
+.venv-api\Scripts\activate
+python -m pip install -r requirements-api.lock pytest
+python -m pytest tests -v
+```
 
 ## Licences
 
