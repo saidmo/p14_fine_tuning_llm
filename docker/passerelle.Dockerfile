@@ -6,10 +6,9 @@
 #   docker build -f docker/passerelle.Dockerfile -t chsa-passerelle:dev .
 
 # Même version mineure que l'environnement de test (.venv-api : Python 3.12).
-# À épingler par empreinte avant la publication : python:3.12-slim@sha256:…
 
-# python:3.12-slim (linux/amd64) — épinglé le 2026-10-26
-FROM python@sha256:a0f57064cbdcd6285fa45f51237ab0b35ea8ebaed06a1f5973e89e19dfb86704
+# python:3.12-slim (linux/amd64) — épinglé le 2026-10-27
+FROM python:3.12-slim@sha256:6d2b0577e6d1632f077331de8e4780535f54839d163ded7abb4b7dd37b5d37ac
 
 ENV PYTHONDONTWRITEBYTECODE=1 \
     PYTHONUNBUFFERED=1 \

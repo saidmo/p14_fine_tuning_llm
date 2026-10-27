@@ -1,0 +1,62 @@
+# CD de la passerelle (semaine 4) — sur étiquette de version (v0.1.0, v0.2.0…) :
+#   1. la CI complète (tests, construction et essai de fumée de l'image), réutilisée telle quelle ;
+#   2. la publication de l'image sur GHCR, sous l'étiquette de version, jamais « latest ».
+# L'image ne contient ni poids ni secret : elle peut être publique.
+# Une version publiée n'est jamais écrasée : une correction = une nouvelle étiquette.
+name: CD
+
+on:
+  push:
+    tags: ["v*.*.*"]
+
+permissions:
+  contents: read
+
+jobs:
+  ci:
+    uses: ./.github/workflows/ci.yml        # mêmes vérifications qu'à chaque push
+
+  publication:
+    needs: ci                               # rien n'est publié si la CI échoue
+    runs-on: ubuntu-24.04
+    permissions:
+      contents: read
+      packages: write                       # seul job du projet autorisé à écrire sur GHCR
+    env:
+      IMAGE: ghcr.io/${{ github.repository_owner }}/chsa-passerelle
+      VERSION: ${{ github.ref_name }}
+    steps:
+      - uses: actions/checkout@v5
+
+      - name: Connexion à GHCR (jeton éphémère du workflow, aucun secret stocké)
+        run: echo "${{ secrets.GITHUB_TOKEN }}" | docker login ghcr.io -u "${{ github.actor }}" --password-stdin
+
+      - name: Refus d'écraser une version déjà publiée
+        run: |
+          if docker manifest inspect "$IMAGE:$VERSION" > /dev/null 2>&1; then
+            echo "::error::$IMAGE:$VERSION existe déjà : publier sous une nouvelle étiquette"
+            exit 1
+          fi
+
+      - name: "Construction (étiquettes OCI : source, commit, version, licence)"
+        run: |
+          docker build -f docker/passerelle.Dockerfile \
+            --label org.opencontainers.image.source="${{ github.server_url }}/${{ github.repository }}" \
+            --label org.opencontainers.image.revision="${{ github.sha }}" \
+            --label org.opencontainers.image.version="$VERSION" \
+            --label org.opencontainers.image.licenses="Apache-2.0" \
+            -t "$IMAGE:$VERSION" .
+
+      - name: Publication
+        run: docker push "$IMAGE:$VERSION"
+
+      - name: Empreinte publiée (à épingler côté RunPod)
+        run: |
+          EMPREINTE=$(docker inspect --format '{{index .RepoDigests 0}}' "$IMAGE:$VERSION")
+          echo "Image publiée : $EMPREINTE"
+          {
+            echo "### Image publiée"
+            echo ""
+            echo "- Version : \`$VERSION\` (commit \`${{ github.sha }}\`)"
+            echo "- Empreinte : \`$EMPREINTE\`"
+          } >> "$GITHUB_STEP_SUMMARY"

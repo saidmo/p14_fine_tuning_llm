@@ -8,6 +8,7 @@ name: CI
 on:
   push:
   pull_request:
+  workflow_call:            # réutilisé par le workflow de CD avant toute publication
 
 permissions:
   contents: read            # moindre privilège : la CI lit le dépôt, n'écrit rien
