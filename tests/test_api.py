@@ -195,3 +195,8 @@ def test_sante_degradee_si_vllm_indisponible(client, vllm):
     r = client.get("/sante")
     assert r.status_code == 200                          # la passerelle répond même GPU éteint
     assert (r.json()["statut"], r.json()["vllm"]) == ("degrade", "indisponible")
+
+def test_cle_declaree_dans_la_documentation(client):
+    schemas = client.get("/openapi.json").json()["components"]["securitySchemes"]
+    assert any(s["type"] == "apiKey" and s["in"] == "header" and s["name"] == CONFIG.passerelle.en_tete_cle
+               for s in schemas.values())

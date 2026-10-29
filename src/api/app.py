@@ -15,7 +15,8 @@ import uuid
 from contextlib import asynccontextmanager
 
 import httpx
-from fastapi import Depends, FastAPI, HTTPException, Request, status
+from fastapi import Depends, FastAPI, HTTPException, Request, Security, status
+from fastapi.security import APIKeyHeader
 from fastapi.concurrency import run_in_threadpool
 
 from src.api.config import ConfigServing, Secrets, charger_config
@@ -41,15 +42,20 @@ def creer_app(config: ConfigServing | None = None, secrets: Secrets | None = Non
     app = FastAPI(title="POC CHSA — assistant médical (démonstration)",
                   description=config.passerelle.avertissement, lifespan=cycle_de_vie)
 
-    def authentifier(requete: Request) -> str:
+
+    # Déclarée à FastAPI : /docs affiche un bouton « Authorize » pour saisir la clé.
+    # auto_error=False : l'absence de clé passe par notre propre 401, comme une clé invalide.
+    schema_cle = APIKeyHeader(name=config.passerelle.en_tete_cle, auto_error=False,
+                              description="Clé d'accès personnelle (seule son empreinte est conservée).")
+
+    def authentifier(cle: str | None = Security(schema_cle)) -> str:
         """Renvoie l'identifiant journalisé de la clé : 8 caractères de son empreinte."""
-        cle = requete.headers.get(config.passerelle.en_tete_cle, "")
-        empreinte = hashlib.sha256(cle.encode()).hexdigest()
+        empreinte = hashlib.sha256((cle or "").encode()).hexdigest()
         # comparaison à temps constant : la durée ne renseigne pas sur la proximité d'une clé valide
         if not cle or not any(hmac.compare_digest(empreinte, e) for e in secrets.empreintes_cles):
             raise HTTPException(status.HTTP_401_UNAUTHORIZED, "clé d'API absente ou invalide")
         return empreinte[:8]
-
+    
     @app.post("/v1/reponses", response_model=ReponseQuestion)
     async def repondre(corps: RequeteQuestion, requete: Request,
                        cle: str = Depends(authentifier)) -> ReponseQuestion:
